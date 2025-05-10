@@ -5,20 +5,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,8 +59,8 @@ fun GlimpseGrid(glimpses: List<Glimpse>, modifier: Modifier, contentPadding: Pad
         columns = GridCells.Adaptive(100.dp),
         modifier = modifier,
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         items(glimpses) {
             GlimpseCard(
@@ -70,13 +75,27 @@ fun GlimpseGrid(glimpses: List<Glimpse>, modifier: Modifier, contentPadding: Pad
 fun GlimpseCard(glimpse: Glimpse, modifier: Modifier) {
     Surface(
         modifier = modifier
-            .clip(shape = MaterialTheme.shapes.medium)
-            .border(0.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
+            .clip(shape = MaterialTheme.shapes.small)
+            // TODO: fix clickable delay
+            .clickable(true) {
+
+            }
     ) {
-        Image(
-            painter = painterResource(glimpse.thumbnail),
-            contentDescription = stringResource(glimpse.contentDescription)
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(glimpse.thumbnail),
+                contentDescription = stringResource(glimpse.contentDescription)
+            )
+
+            Text(
+                text = glimpse.author,
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(4.dp)
+            )
+        }
     }
 }
 
