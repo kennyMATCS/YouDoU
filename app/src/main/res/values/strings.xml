@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Glean</string>
+    <string name="preview_1_content_description">Placeholder image</string>
+    <string name="preview_2_content_description">Placeholder image</string>
+    <string name="preview_3_content_description">Placeholder image</string>
+    <string name="preview_4_content_description">Placeholder image</string>
+    <string name="preview_5_content_description">Placeholder image</string>
+    <string name="preview_6_content_description">Placeholder image</string>
+    <string name="preview_7_content_description">Placeholder image</string>
+    <string name="preview_8_content_description">Placeholder image</string>
+    <string name="preview_9_content_description">Placeholder image</string>
+    <string name="preview_10_content_description">Placeholder image</string>
+    <string name="preview_11_content_description">Placeholder image</string>
 </resources>
