@@ -1,32 +1,25 @@
-package cx.glean
+package cx.glean.ui.glimpse
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,23 +27,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
+import cx.glean.R
 import cx.glean.ui.theme.GleanTheme
+import kotlin.time.Duration.Companion.seconds
 
 data class Glimpse(var author: String, var duration: Int, var thumbnail: Int, var contentDescription: Int)
 
 @Composable
 fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(100.dp),
+        columns = GridCells.Fixed(3),
         modifier = modifier,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        items(glimpses) {
+        items(
+            items = glimpses,
+        ) {
             GlimpseCard(
                 glimpse = it,
                 modifier = Modifier
@@ -73,9 +70,10 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse) {
             )
 
             Text(
-                text = glimpse.author,
+                text = glimpse.duration.seconds.toComponents { hours, minutes, seconds ->
+                    "$hours:$minutes"
+                },
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
                 color = Color.White,
                 modifier = modifier
                     .align(Alignment.BottomStart)
@@ -87,46 +85,37 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse) {
 
 @Composable
 fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
-    Scaffold(
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val expandedListDetailPane = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.VIEW) }
+
+    NavigationSuiteScaffold(
         modifier = modifier
             .fillMaxSize(),
-        bottomBar = {
-            GleanBottomBar(modifier)
+        navigationSuiteItems = {
+            AppDestinations.entries.forEach {
+                item(
+                    icon = {
+                        Icon(
+                            it.icon,
+                            contentDescription = stringResource(it.contentDescription)
+                        )
+                    },
+                    label = {
+                        if (expandedListDetailPane) Text(stringResource(it.label)) else ""
+                    },
+                    selected = (it == currentDestination),
+                    onClick = { currentDestination = it }
+                )
+            }
         }
-    ) { innerPadding ->
-        GlimpseGrid(
-            glimpses = glimpses,
-            modifier = modifier
-                .consumeWindowInsets(innerPadding)
-                .padding(7.dp),
-            contentPadding = innerPadding
-        )
-    }
-}
-
-@Composable
-fun GleanBottomBar(modifier: Modifier) {
-    var selectedItem by remember { mutableIntStateOf(1) }
-
-    var items = listOf("Create", "View", "Info", "Settings")
-
-    NavigationBar(
-        modifier = modifier,
     ) {
-        items.forEachIndexed { index, item ->
-            NavigationBarItem(
-                icon = {
-                    when (index) {
-                        0 -> Icon(Icons.Filled.AddCircle, contentDescription = null)
-                        1 -> Icon(Icons.Filled.Star, contentDescription = null)
-                        2 -> Icon(Icons.Filled.Info, contentDescription = null)
-                        3 -> Icon(Icons.Filled.Settings, contentDescription = null)
-                    }
-                },
-                // TODO: ???
-                selected = (selectedItem == index),
-                onClick = { selectedItem = index }
-            )
+        when (currentDestination) {
+            AppDestinations.RECORD -> { }
+            // TODO: where to consume inner padding?
+            AppDestinations.VIEW -> { GlimpseGrid(modifier = modifier.padding(7.dp), glimpses = glimpses, contentPadding = PaddingValues(0.dp)) }
+            AppDestinations.INFO -> { }
+            AppDestinations.SETTINGS -> { }
         }
     }
 }
@@ -171,5 +160,6 @@ var previewGlimpses = listOf(
     Glimpse("Noelle", 441, R.drawable.preview_8, R.string.preview_8_content_description),
     Glimpse("Marion", 440, R.drawable.preview_9, R.string.preview_9_content_description),
     Glimpse("Rosie", 328, R.drawable.preview_10, R.string.preview_10_content_description),
-    Glimpse("Hoyt", 419, R.drawable.preview_11, R.string.preview_11_content_description)
+    Glimpse("Hoyt", 419, R.drawable.preview_11, R.string.preview_11_content_description),
+    Glimpse("Jordan", 562, R.drawable.preview_12, R.string.preview_12_content_description)
 )

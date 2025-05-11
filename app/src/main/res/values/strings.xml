@@ -11,4 +11,9 @@
     <string name="preview_9_content_description">Placeholder image</string>
     <string name="preview_10_content_description">Placeholder image</string>
     <string name="preview_11_content_description">Placeholder image</string>
+    <string name="preview_12_content_description">Placeholder image</string>
+    <string name="destination_record">Record</string>
+    <string name="destination_view">Glimpses</string>
+    <string name="destination_info">Info</string>
+    <string name="destination_settings">Settings</string>
 </resources>
