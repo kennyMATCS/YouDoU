@@ -1,4 +1,4 @@
-package cx.glean.ui.glimpse
+package cx.glean
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
-import cx.glean.R
 
 // TODO: better content description
 enum class AppDestinations(

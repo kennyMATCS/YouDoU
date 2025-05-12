@@ -1,11 +1,18 @@
 package cx.glean.ui.glimpse
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.IntegerRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,32 +32,130 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
+import cx.glean.AppDestinations
 import cx.glean.R
-import cx.glean.ui.theme.GleanTheme
 import kotlin.time.Duration.Companion.seconds
 
-data class Glimpse(var author: String, var duration: Int, var thumbnail: Int, var contentDescription: Int)
+data class Glimpse(
+    @StringRes var author: Int,
+    @IntegerRes var duration: Int,
+    @DrawableRes var thumbnail: Int,
+    @StringRes var contentDescription: Int,
+    val time: Int
+)
+
+var previewGlimpses = listOf(
+    Glimpse(
+        author = R.string.preview_1_name,
+        duration = R.integer.preview_1_duration,
+        thumbnail = R.drawable.preview_1,
+        contentDescription = R.string.preview_1_content_description,
+        time = R.string.preview_1_date
+    ),
+    Glimpse(
+        author = R.string.preview_2_name,
+        duration = R.integer.preview_2_duration,
+        thumbnail = R.drawable.preview_2,
+        contentDescription = R.string.preview_2_content_description,
+        time = R.string.preview_2_date
+    ),
+    Glimpse(
+        author = R.string.preview_3_name,
+        duration = R.integer.preview_3_duration,
+        thumbnail = R.drawable.preview_3,
+        contentDescription = R.string.preview_3_content_description,
+        time = R.string.preview_3_date
+    ),
+    Glimpse(
+        author = R.string.preview_4_name,
+        duration = R.integer.preview_4_duration,
+        thumbnail = R.drawable.preview_4,
+        contentDescription = R.string.preview_4_content_description,
+        time = R.string.preview_4_date
+    ),
+    Glimpse(
+        author = R.string.preview_5_name,
+        duration = R.integer.preview_5_duration,
+        thumbnail = R.drawable.preview_5,
+        contentDescription = R.string.preview_5_content_description,
+        time = R.string.preview_5_date
+    ),
+    Glimpse(
+        author = R.string.preview_6_name,
+        duration = R.integer.preview_6_duration,
+        thumbnail = R.drawable.preview_6,
+        contentDescription = R.string.preview_6_content_description,
+        time = R.string.preview_6_date
+    ),
+    Glimpse(
+        author = R.string.preview_7_name,
+        duration = R.integer.preview_7_duration,
+        thumbnail = R.drawable.preview_7,
+        contentDescription = R.string.preview_7_content_description,
+        time = R.string.preview_7_date
+    ),
+    Glimpse(
+        author = R.string.preview_8_name,
+        duration = R.integer.preview_8_duration,
+        thumbnail = R.drawable.preview_8,
+        contentDescription = R.string.preview_8_content_description,
+        time = R.string.preview_8_date
+    ),
+    Glimpse(
+        author = R.string.preview_9_name,
+        duration = R.integer.preview_9_duration,
+        thumbnail = R.drawable.preview_9,
+        contentDescription = R.string.preview_9_content_description,
+        time = R.string.preview_9_date
+    ),
+    Glimpse(
+        author = R.string.preview_10_name,
+        duration = R.integer.preview_10_duration,
+        thumbnail = R.drawable.preview_10,
+        contentDescription = R.string.preview_10_content_description,
+        time = R.string.preview_10_date
+    ),
+    Glimpse(
+        author = R.string.preview_11_name,
+        duration = R.integer.preview_11_duration,
+        thumbnail = R.drawable.preview_11,
+        contentDescription = R.string.preview_11_content_description,
+        time = R.string.preview_11_date
+    ),
+    Glimpse(
+        author = R.string.preview_12_name,
+        duration = R.integer.preview_12_duration,
+        thumbnail = R.drawable.preview_12,
+        contentDescription = R.string.preview_12_content_description,
+        time = R.string.preview_12_date
+    )
+)
 
 @Composable
-fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues) {
+fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, detailPaneBreakpoint: DetailPaneBreakpoint) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = when (detailPaneBreakpoint) {
+            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(120.dp)
+            DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(4)
+            DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
+        },
         modifier = modifier,
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         items(
             items = glimpses,
         ) {
             GlimpseCard(
                 glimpse = it,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
     }
@@ -60,33 +165,76 @@ fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: Pad
 fun GlimpseCard(modifier: Modifier, glimpse: Glimpse) {
     Surface(
         modifier = modifier
-            .clip(shape = MaterialTheme.shapes.small)
-            .clickable(true) { }
+            .clip(shape = MaterialTheme.shapes.medium)
+            .clickable(true) { },
+        tonalElevation = 5.dp
     ) {
-        Box(modifier = modifier.fillMaxSize()) {
-            Image(
-                painter = painterResource(glimpse.thumbnail),
-                contentDescription = stringResource(glimpse.contentDescription)
-            )
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+        ) {
+            Column (
+                modifier = Modifier
+                    .padding(4.dp)
+            ) {
+                Box {
+                    Image(
+                        painter = painterResource(glimpse.thumbnail),
+                        contentDescription = stringResource(glimpse.contentDescription),
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                    )
 
-            Text(
-                text = glimpse.duration.seconds.toComponents { hours, minutes, seconds ->
-                    "$hours:$minutes"
-                },
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
-                modifier = modifier
-                    .align(Alignment.BottomStart)
-                    .padding(6.dp)
-            )
+                    Text(
+                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
+                            "$hours:$minutes"
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        modifier = modifier
+                            .align(Alignment.BottomStart)
+                            .padding(6.dp)
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+
+                    Text(
+                        text = stringResource(glimpse.time),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
     }
+}
+
+enum class DetailPaneBreakpoint {
+    COMPACT,
+    MEDIUM,
+    EXPANDED
 }
 
 @Composable
 fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val expandedListDetailPane = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+
+    val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
+        DetailPaneBreakpoint.EXPANDED
+    } else if (windowSizeClass.isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) {
+        DetailPaneBreakpoint.MEDIUM
+    } else {
+        DetailPaneBreakpoint.COMPACT
+    }
+
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.VIEW) }
 
     NavigationSuiteScaffold(
@@ -102,7 +250,7 @@ fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
                         )
                     },
                     label = {
-                        if (expandedListDetailPane) Text(stringResource(it.label)) else ""
+                        Text(stringResource(it.label))
                     },
                     selected = (it == currentDestination),
                     onClick = { currentDestination = it }
@@ -112,15 +260,20 @@ fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
     ) {
         when (currentDestination) {
             AppDestinations.RECORD -> { }
-            // TODO: where to consume inner padding?
-            AppDestinations.VIEW -> { GlimpseGrid(modifier = modifier.padding(7.dp), glimpses = glimpses, contentPadding = PaddingValues(0.dp)) }
+            AppDestinations.VIEW -> {
+                GlimpseGrid(
+                    modifier = Modifier,
+                    glimpses = glimpses,
+                    contentPadding = PaddingValues(7.dp),
+                    detailPaneBreakpoint = detailPaneBreakpoint
+                )
+            }
             AppDestinations.INFO -> { }
             AppDestinations.SETTINGS -> { }
         }
     }
 }
 
-// TODO: fix glimpse card preview. scale card size to screen size
 @Preview
 @Composable
 fun PreviewGlimpseCard() {
@@ -137,29 +290,13 @@ fun PreviewGlimpseGrid() {
     GlimpseGrid(
         glimpses = previewGlimpses,
         modifier = Modifier,
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(0.dp),
+        detailPaneBreakpoint = DetailPaneBreakpoint.COMPACT
     )
 }
 
 @Preview
 @Composable
 fun PreviewScaffold() {
-    GleanTheme {
-        GlimpseScaffold(Modifier, previewGlimpses)
-    }
+    GlimpseScaffold(Modifier, previewGlimpses)
 }
-
-var previewGlimpses = listOf(
-    Glimpse("Elena", 557, R.drawable.preview_1, R.string.preview_1_content_description),
-    Glimpse("Marisol", 387, R.drawable.preview_2, R.string.preview_2_content_description),
-    Glimpse("Kristy", 407, R.drawable.preview_3, R.string.preview_3_content_description),
-    Glimpse("Virgie", 553, R.drawable.preview_4, R.string.preview_4_content_description),
-    Glimpse("Buford", 416, R.drawable.preview_5, R.string.preview_5_content_description),
-    Glimpse("Liz", 330, R.drawable.preview_6, R.string.preview_6_content_description),
-    Glimpse("Ariel", 327, R.drawable.preview_7, R.string.preview_7_content_description),
-    Glimpse("Noelle", 441, R.drawable.preview_8, R.string.preview_8_content_description),
-    Glimpse("Marion", 440, R.drawable.preview_9, R.string.preview_9_content_description),
-    Glimpse("Rosie", 328, R.drawable.preview_10, R.string.preview_10_content_description),
-    Glimpse("Hoyt", 419, R.drawable.preview_11, R.string.preview_11_content_description),
-    Glimpse("Jordan", 562, R.drawable.preview_12, R.string.preview_12_content_description)
-)

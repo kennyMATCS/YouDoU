@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Duration Values -->
+    <integer name="preview_1_duration">557</integer>
+    <integer name="preview_2_duration">387</integer>
+    <integer name="preview_3_duration">407</integer>
+    <integer name="preview_4_duration">553</integer>
+    <integer name="preview_5_duration">416</integer>
+    <integer name="preview_6_duration">330</integer>
+    <integer name="preview_7_duration">327</integer>
+    <integer name="preview_8_duration">441</integer>
+    <integer name="preview_9_duration">440</integer>
+    <integer name="preview_10_duration">328</integer>
+    <integer name="preview_11_duration">419</integer>
+    <integer name="preview_12_duration">562</integer>
+</resources>
