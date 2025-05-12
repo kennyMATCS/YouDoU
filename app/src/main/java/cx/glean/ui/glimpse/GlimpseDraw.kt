@@ -141,7 +141,7 @@ var previewGlimpses = listOf(
 fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, detailPaneBreakpoint: DetailPaneBreakpoint) {
     LazyVerticalGrid(
         columns = when (detailPaneBreakpoint) {
-            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(120.dp)
+            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(125.dp)
             DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(4)
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
@@ -169,47 +169,43 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse) {
             .clickable(true) { },
         tonalElevation = 5.dp
     ) {
-        Box(
-            modifier = modifier
+        Column (
+            modifier = Modifier
+                .padding(4.dp)
                 .fillMaxSize()
         ) {
-            Column (
-                modifier = Modifier
-                    .padding(4.dp)
-            ) {
-                Box {
-                    Image(
-                        painter = painterResource(glimpse.thumbnail),
-                        contentDescription = stringResource(glimpse.contentDescription),
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                    )
-
-                    Text(
-                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
-                            "$hours:$minutes"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White,
-                        modifier = modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
+            Box {
+                Image(
+                    painter = painterResource(glimpse.thumbnail),
+                    contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
+                        .clip(MaterialTheme.shapes.small)
+                )
 
-                    Text(
-                        text = stringResource(glimpse.time),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                Text(
+                    text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
+                        "$hours:$minutes"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = modifier
+                        .align(Alignment.BottomStart)
+                        .padding(6.dp)
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+
+                Text(
+                    text = stringResource(glimpse.time),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }
@@ -235,7 +231,8 @@ fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
         DetailPaneBreakpoint.COMPACT
     }
 
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.VIEW) }
+    var start = AppDestinations.VIEW
+    var currentDestination by rememberSaveable { mutableStateOf(start) }
 
     NavigationSuiteScaffold(
         modifier = modifier
@@ -259,7 +256,7 @@ fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
         }
     ) {
         when (currentDestination) {
-            AppDestinations.RECORD -> { }
+            AppDestinations.RECORD -> { Box { } }
             AppDestinations.VIEW -> {
                 GlimpseGrid(
                     modifier = Modifier,
@@ -268,8 +265,8 @@ fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
                     detailPaneBreakpoint = detailPaneBreakpoint
                 )
             }
-            AppDestinations.INFO -> { }
-            AppDestinations.SETTINGS -> { }
+            AppDestinations.INFO -> { Box { } }
+            AppDestinations.SETTINGS -> { Box { } }
         }
     }
 }
