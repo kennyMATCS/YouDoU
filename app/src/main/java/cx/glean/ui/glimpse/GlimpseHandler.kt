@@ -17,17 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +30,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowSizeClass
-import cx.glean.AppDestinations
 import cx.glean.R
 import kotlin.time.Duration.Companion.seconds
 
@@ -47,7 +38,7 @@ data class Glimpse(
     @IntegerRes var duration: Int,
     @DrawableRes var thumbnail: Int,
     @StringRes var contentDescription: Int,
-    val time: Int
+    @StringRes val time: Int
 )
 
 var previewGlimpses = listOf(
@@ -217,60 +208,6 @@ enum class DetailPaneBreakpoint {
     EXPANDED
 }
 
-@Composable
-fun GlimpseScaffold(modifier: Modifier, glimpses: List<Glimpse>) {
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-
-    val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
-        DetailPaneBreakpoint.EXPANDED
-    } else if (windowSizeClass.isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
-            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) {
-        DetailPaneBreakpoint.MEDIUM
-    } else {
-        DetailPaneBreakpoint.COMPACT
-    }
-
-    var start = AppDestinations.VIEW
-    var currentDestination by rememberSaveable { mutableStateOf(start) }
-
-    NavigationSuiteScaffold(
-        modifier = modifier
-            .fillMaxSize(),
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = stringResource(it.contentDescription)
-                        )
-                    },
-                    label = {
-                        Text(stringResource(it.label))
-                    },
-                    selected = (it == currentDestination),
-                    onClick = { currentDestination = it }
-                )
-            }
-        }
-    ) {
-        when (currentDestination) {
-            AppDestinations.RECORD -> { Box { } }
-            AppDestinations.VIEW -> {
-                GlimpseGrid(
-                    modifier = Modifier,
-                    glimpses = glimpses,
-                    contentPadding = PaddingValues(7.dp),
-                    detailPaneBreakpoint = detailPaneBreakpoint
-                )
-            }
-            AppDestinations.INFO -> { Box { } }
-            AppDestinations.SETTINGS -> { Box { } }
-        }
-    }
-}
-
 @Preview
 @Composable
 fun PreviewGlimpseCard() {
@@ -290,10 +227,4 @@ fun PreviewGlimpseGrid() {
         contentPadding = PaddingValues(0.dp),
         detailPaneBreakpoint = DetailPaneBreakpoint.COMPACT
     )
-}
-
-@Preview
-@Composable
-fun PreviewScaffold() {
-    GlimpseScaffold(Modifier, previewGlimpses)
 }
