@@ -1,9 +1,7 @@
 package cx.glean.ui.glimpse
 
-import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
-import android.content.ContextWrapper
 import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
@@ -28,29 +26,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import cx.glean.R
+import cx.glean.WatchingInfo
 import kotlin.time.Duration.Companion.seconds
 
 
@@ -162,7 +152,10 @@ var previewGlimpses = listOf(
     )
 )
 @Composable
-fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, detailPaneBreakpoint: DetailPaneBreakpoint) {
+fun GlimpseGrid(
+    modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues,
+    detailPaneBreakpoint: DetailPaneBreakpoint, watchingInfo: MutableState<WatchingInfo>
+) {
     LazyVerticalGrid(
         columns = when (detailPaneBreakpoint) {
             DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(125.dp)
@@ -179,7 +172,8 @@ fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: Pad
         ) {
             GlimpseCard(
                 glimpse = it,
-                modifier = Modifier
+                modifier = Modifier,
+                watchingInfo = watchingInfo
             )
         }
     }
@@ -187,91 +181,53 @@ fun GlimpseGrid(modifier: Modifier, glimpses: List<Glimpse>, contentPadding: Pad
 
 @OptIn(UnstableApi::class)
 @Composable
-fun GlimpseCard(modifier: Modifier, glimpse: Glimpse) {
-    var watching by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
-    var exoPlayer = ExoPlayer.Builder(context)
-        .setHandleAudioBecomingNoisy(true)
-        .build()
-
-    exoPlayer.addListener(object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying == false) {
-                watching = false
-            }
-        }
-    })
-
-    var mediaItem = MediaItem.fromUri(glimpse.video.getUri(context))
-
-    if (watching) {
-        LaunchedEffect(mediaItem) {
-            exoPlayer.setMediaItem(mediaItem)
-            exoPlayer.prepare()
-        }
-
-        DisposableEffect(Unit) {
-            onDispose {
-                exoPlayer.release()
-            }
-        }
-
-        AndroidView(
-            factory = { context ->
-                PlayerView(context).apply {
-                    player = exoPlayer
-                }
+fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, watchingInfo: MutableState<WatchingInfo>) {
+    Surface(
+        modifier = modifier
+            .clip(shape = MaterialTheme.shapes.medium)
+            .clickable(true) {
+                watchingInfo.value = watchingInfo.value.copy(watching = true, glimpseWatching =
+                    glimpse)
             },
+        tonalElevation = 5.dp
+    ) {
+        Column (
             modifier = Modifier
+                .padding(4.dp)
                 .fillMaxSize()
-        )
-    } else {
-        Surface(
-            modifier = modifier
-                .clip(shape = MaterialTheme.shapes.medium)
-                .clickable(true) {
-                    watching = true
-                },
-            tonalElevation = 5.dp
         ) {
-            Column (
-                modifier = Modifier
-                    .padding(4.dp)
-                    .fillMaxSize()
-            ) {
-                Box {
-                    Image(
-                        painter = painterResource(glimpse.thumbnail),
-                        contentDescription = stringResource(glimpse.contentDescription),
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                    )
-
-                    Text(
-                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
-                            "$hours:$minutes"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White,
-                        modifier = modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
+            Box {
+                Image(
+                    painter = painterResource(glimpse.thumbnail),
+                    contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
+                        .clip(MaterialTheme.shapes.small)
+                )
 
-                    Text(
-                        text = stringResource(glimpse.time),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                Text(
+                    text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
+                        "$hours:$minutes"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = modifier
+                        .align(Alignment.BottomStart)
+                        .padding(6.dp)
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+
+                Text(
+                    text = stringResource(glimpse.time),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }
@@ -303,6 +259,7 @@ fun PreviewGlimpseCard() {
     GlimpseCard(
         modifier = Modifier,
         glimpse = glimpse,
+        watchingInfo = remember { mutableStateOf(WatchingInfo(false, null)) }
     )
 }
 
@@ -310,9 +267,10 @@ fun PreviewGlimpseCard() {
 @Composable
 fun PreviewGlimpseGrid() {
     GlimpseGrid(
-        glimpses = previewGlimpses,
         modifier = Modifier,
+        glimpses = previewGlimpses,
         contentPadding = PaddingValues(0.dp),
-        detailPaneBreakpoint = DetailPaneBreakpoint.COMPACT
+        detailPaneBreakpoint = DetailPaneBreakpoint.COMPACT,
+        watchingInfo = remember {  mutableStateOf(WatchingInfo(false, null)) }
     )
 }
