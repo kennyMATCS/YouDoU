@@ -162,7 +162,8 @@ fun GlimpseGrid(
             DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(4)
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
-        modifier = modifier,
+        modifier = modifier
+            .padding(8.dp),
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)

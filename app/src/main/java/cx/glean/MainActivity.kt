@@ -9,8 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -24,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,7 +56,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GleanTheme {
-                GleanScaffold(Modifier, activity = this, glimpses = previewGlimpses)
+                GleanScaffold(
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .background(Color.Black),
+                    activity = this,
+                    glimpses = previewGlimpses)
             }
         }
     }
@@ -68,6 +78,8 @@ fun GleanScaffold(
     activity: Activity?
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    var windowInsetsController = WindowCompat.getInsetsController(activity!!.window, activity.window.decorView)
+    // windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
 
     val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
             WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
@@ -99,8 +111,6 @@ fun GleanScaffold(
         // TODO: scary null call, check on this
         var mediaItem = MediaItem.fromUri(watchingInfo.value.glimpseWatching?.video!!.getUri
             (context))
-
-        var windowInsetsController = WindowCompat.getInsetsController(activity!!.window, activity.window.decorView)
 
         LaunchedEffect(mediaItem) {
             exoPlayer.setMediaItem(mediaItem)
@@ -158,7 +168,7 @@ fun GleanScaffold(
                     GlimpseGrid(
                         modifier = Modifier,
                         glimpses = glimpses,
-                        contentPadding = PaddingValues(7.dp),
+                        contentPadding = PaddingValues(10.dp),
                         detailPaneBreakpoint = detailPaneBreakpoint,
                         watchingInfo = watchingInfo,
                     )
