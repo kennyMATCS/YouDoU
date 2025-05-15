@@ -1,11 +1,14 @@
 package cx.glean
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
@@ -26,8 +29,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.window.core.layout.WindowSizeClass
@@ -45,7 +51,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GleanTheme {
-                GleanScaffold(Modifier)
+                GleanScaffold(Modifier, activity = this, glimpses = previewGlimpses)
             }
         }
     }
@@ -53,11 +59,13 @@ class MainActivity : ComponentActivity() {
 
 data class WatchingInfo(var watching: Boolean, var glimpseWatching: Glimpse?)
 
+@OptIn(UnstableApi::class)
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GleanScaffold(
     modifier: Modifier,
     glimpses: List<Glimpse> = listOf(),
+    activity: Activity?
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
@@ -92,14 +100,22 @@ fun GleanScaffold(
         var mediaItem = MediaItem.fromUri(watchingInfo.value.glimpseWatching?.video!!.getUri
             (context))
 
+        var windowInsetsController = WindowCompat.getInsetsController(activity!!.window, activity.window.decorView)
+
         LaunchedEffect(mediaItem) {
             exoPlayer.setMediaItem(mediaItem)
             exoPlayer.prepare()
+            exoPlayer.play()
+
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         }
 
         DisposableEffect(Unit) {
             onDispose {
                 exoPlayer.release()
+                watchingInfo.value = watchingInfo.value.copy(watching = false, glimpseWatching = null)
+
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
             }
         }
 
@@ -107,6 +123,8 @@ fun GleanScaffold(
             factory = { context ->
                 PlayerView(context).apply {
                     player = exoPlayer
+                    useController = false
+                    setBackgroundResource(R.drawable.black)
                 }
             },
             modifier = Modifier
@@ -152,8 +170,19 @@ fun GleanScaffold(
     }
 }
 
+fun Context.getActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) {
+            return currentContext
+        }
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
+
 @Preview
 @Composable
 fun PreviewScaffold() {
-    GleanScaffold(Modifier, previewGlimpses)
+    GleanScaffold(Modifier, previewGlimpses, LocalContext.current.getActivity())
 }
