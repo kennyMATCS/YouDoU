@@ -22,6 +22,10 @@ import cx.glean.ui.glimpse.getUri
 
 data class WatchingInfo(var watching: Boolean, var glimpseWatching: Glimpse?)
 
+fun MutableState<WatchingInfo>.clear() {
+    value = value.copy(watching = false, glimpseWatching = null)
+}
+
 @Composable
 fun GlimpsePlayer(
     modifier: Modifier,
@@ -37,7 +41,7 @@ fun GlimpsePlayer(
     exoPlayer.addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) {
-                watchingInfo.value = watchingInfo.value.copy(watching = false, glimpseWatching = null)
+                watchingInfo.clear()
             }
         }
     })

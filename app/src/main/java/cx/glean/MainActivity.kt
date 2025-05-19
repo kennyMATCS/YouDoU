@@ -2,7 +2,12 @@ package cx.glean
 
 import android.app.Activity
 import android.os.Bundle
+import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.OnBackPressedDispatcherOwner
+import androidx.activity.addCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -16,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,8 +37,11 @@ import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.GlimpseGrid
 import cx.glean.ui.glimpse.player.GlimpsePlayer
 import cx.glean.ui.glimpse.player.WatchingInfo
+import cx.glean.ui.glimpse.player.clear
 import cx.glean.ui.theme.GleanTheme
 import cx.glean.ui.glimpse.previewGlimpses
+
+var watchingInfo: MutableState<WatchingInfo>? = null
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +57,11 @@ class MainActivity : ComponentActivity() {
                     activity = this,
                     glimpses = previewGlimpses)
             }
+        }
+
+
+        onBackPressedDispatcher.addCallback {
+            watchingInfo?.clear()
         }
     }
 }
@@ -70,16 +84,16 @@ fun GleanScaffold(
         DetailPaneBreakpoint.COMPACT
     }
 
-    var watchingInfo = remember { mutableStateOf(WatchingInfo(false, null)) }
-
     var start = AppDestinations.VIEW
     var currentDestination by rememberSaveable { mutableStateOf(start) }
 
-    if (watchingInfo.value.watching) {
+    watchingInfo = remember { mutableStateOf(WatchingInfo(false, null)) }
+
+    if (watchingInfo!!.value.watching) {
         GlimpsePlayer(
             modifier = Modifier,
             window = activity.window,
-            watchingInfo = watchingInfo
+            watchingInfo = watchingInfo!!
         )
     } else {
         // TODO: proper dark mode. nav bar is white when is should be black
@@ -112,7 +126,7 @@ fun GleanScaffold(
                         glimpses = glimpses,
                         contentPadding = PaddingValues(10.dp),
                         detailPaneBreakpoint = detailPaneBreakpoint,
-                        watchingInfo = watchingInfo,
+                        watchingInfo = watchingInfo!!,
                     )
                 }
                 AppDestinations.INFO -> { }
