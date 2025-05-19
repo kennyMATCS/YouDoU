@@ -5,7 +5,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
-import androidx.annotation.OptIn
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
@@ -38,11 +37,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.util.UnstableApi
 import cx.glean.R
-import cx.glean.WatchingInfo
+import cx.glean.ui.glimpse.player.WatchingInfo
 import kotlin.time.Duration.Companion.seconds
-
 
 data class Glimpse(
     @StringRes var author: Int,
@@ -180,7 +177,6 @@ fun GlimpseGrid(
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, watchingInfo: MutableState<WatchingInfo>) {
     Surface(
