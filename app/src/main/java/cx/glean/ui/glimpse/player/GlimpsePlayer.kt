@@ -2,6 +2,7 @@ package cx.glean.ui.glimpse.player
 
 import android.view.LayoutInflater
 import android.view.Window
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,13 +13,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import cx.glean.R
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.getUri
 
+@OptIn(UnstableApi::class)
 @Composable
 fun GlimpsePlayer(
     modifier: Modifier,
@@ -66,6 +68,7 @@ fun GlimpsePlayer(
             (LayoutInflater.from(context).inflate(R.layout.glimpse_player_view,
                 null, false) as PlayerView).apply {
                 player = exoPlayer
+                setKeepContentOnPlayerReset(true)
             }
         },
         modifier = modifier

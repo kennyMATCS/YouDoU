@@ -3,11 +3,6 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.os.Bundle
-import androidx.annotation.DrawableRes
-import androidx.annotation.IntegerRes
-import androidx.annotation.RawRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,34 +22,35 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavType
 import androidx.window.core.layout.WindowSizeClass
 import cx.glean.R
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 data class Glimpse(
-    @StringRes var author: Int,
-    @IntegerRes var duration: Int,
-    @DrawableRes var thumbnail: Int,
-    @StringRes var contentDescription: Int,
-    @StringRes val time: Int,
-    @RawRes val video: Int,
+    var author: Int,
+    var duration: Int,
+    var thumbnail: Int,
+    var contentDescription: Int,
+    val time: Int,
+    val video: Int,
+    val secondsUntilExpiration: Int
 )
 
 var previewGlimpses = listOf(
@@ -65,6 +61,7 @@ var previewGlimpses = listOf(
         contentDescription = R.string.preview_1_content_description,
         time = R.string.preview_1_date,
         video = R.raw.preview_1,
+        secondsUntilExpiration = R.integer.preview_1_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_2_name,
@@ -72,7 +69,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_2,
         contentDescription = R.string.preview_2_content_description,
         time = R.string.preview_2_date,
-        video = R.raw.preview_2
+        video = R.raw.preview_2,
+        secondsUntilExpiration = R.integer.preview_2_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_3_name,
@@ -80,7 +78,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_3,
         contentDescription = R.string.preview_3_content_description,
         time = R.string.preview_3_date,
-        video = R.raw.preview_3
+        video = R.raw.preview_3,
+        secondsUntilExpiration = R.integer.preview_3_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_4_name,
@@ -88,7 +87,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_4,
         contentDescription = R.string.preview_4_content_description,
         time = R.string.preview_4_date,
-        video = R.raw.preview_4
+        video = R.raw.preview_4,
+        secondsUntilExpiration = R.integer.preview_4_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_5_name,
@@ -96,7 +96,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_5,
         contentDescription = R.string.preview_5_content_description,
         time = R.string.preview_5_date,
-        video = R.raw.preview_5
+        video = R.raw.preview_5,
+        secondsUntilExpiration = R.integer.preview_5_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_6_name,
@@ -104,7 +105,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_6,
         contentDescription = R.string.preview_6_content_description,
         time = R.string.preview_6_date,
-        video = R.raw.preview_6
+        video = R.raw.preview_6,
+        secondsUntilExpiration = R.integer.preview_6_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_7_name,
@@ -112,7 +114,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_7,
         contentDescription = R.string.preview_7_content_description,
         time = R.string.preview_7_date,
-        video = R.raw.preview_7
+        video = R.raw.preview_7,
+        secondsUntilExpiration = R.integer.preview_7_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_8_name,
@@ -120,7 +123,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_8,
         contentDescription = R.string.preview_8_content_description,
         time = R.string.preview_8_date,
-        video = R.raw.preview_8
+        video = R.raw.preview_8,
+        secondsUntilExpiration = R.integer.preview_8_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_9_name,
@@ -128,7 +132,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_9,
         contentDescription = R.string.preview_9_content_description,
         time = R.string.preview_9_date,
-        video = R.raw.preview_9
+        video = R.raw.preview_9,
+        secondsUntilExpiration = R.integer.preview_9_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_10_name,
@@ -136,7 +141,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_10,
         contentDescription = R.string.preview_10_content_description,
         time = R.string.preview_10_date,
-        video = R.raw.preview_10
+        video = R.raw.preview_10,
+        secondsUntilExpiration = R.integer.preview_10_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_11_name,
@@ -144,7 +150,8 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_11,
         contentDescription = R.string.preview_11_content_description,
         time = R.string.preview_11_date,
-        video = R.raw.preview_11
+        video = R.raw.preview_11,
+        secondsUntilExpiration = R.integer.preview_11_seconds_until_expiration,
     ),
     Glimpse(
         author = R.string.preview_12_name,
@@ -152,9 +159,11 @@ var previewGlimpses = listOf(
         thumbnail = R.drawable.preview_12,
         contentDescription = R.string.preview_12_content_description,
         time = R.string.preview_12_date,
-        video = R.raw.preview_12
+        video = R.raw.preview_12,
+        secondsUntilExpiration = R.integer.preview_12_seconds_until_expiration,
     )
 )
+
 @Composable
 fun GlimpseGrid(
     modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, onClickGlimpse:
@@ -212,11 +221,21 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) 
                 .fillMaxSize()
         ) {
             Box {
+                val heightFactor: Float = (integerResource(glimpse
+                    .secondsUntilExpiration) / (60f * 24f))
+
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                color = Color(0, 0, 0, 100),
+                                size = Size(size.width * heightFactor, size.height)
+                            )
+                        }
                 )
 
                 Text(
