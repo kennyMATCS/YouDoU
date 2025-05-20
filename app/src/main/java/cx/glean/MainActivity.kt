@@ -2,22 +2,15 @@ package cx.glean
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
@@ -80,8 +73,16 @@ class MainActivity : ComponentActivity() {
                                 fadeIn(initialAlpha = 0.3f)
                     },
                     exitTransition = {
-                        postponeEnterTransition()
-                        fadeOut()
+                        slideOutVertically(
+                            // Start the slide from 40 (pixels) above where the content is supposed to go, to
+                            // produce a parallax effect
+                            targetOffsetY = { -40 }
+                        ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
+                                scaleOut(
+                                    // Animate scale from 0f to 1f using the top center as the pivot point.
+                                    transformOrigin = TransformOrigin(0.5f, 0f)
+                                ) +
+                                fadeOut(targetAlpha = 0.3f)
                     }
                 ) {
                     composable<MainApp> {
