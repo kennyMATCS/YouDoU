@@ -3,6 +3,7 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
 import androidx.annotation.RawRes
@@ -24,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -37,10 +39,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
+import androidx.window.core.layout.WindowSizeClass
 import cx.glean.R
-import cx.glean.ui.glimpse.player.WatchingInfo
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
+@Serializable
 data class Glimpse(
     @StringRes var author: Int,
     @IntegerRes var duration: Int,
@@ -150,9 +157,21 @@ var previewGlimpses = listOf(
 )
 @Composable
 fun GlimpseGrid(
-    modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues,
-    detailPaneBreakpoint: DetailPaneBreakpoint, watchingInfo: MutableState<WatchingInfo>
+    modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, onClickGlimpse:
+        (Glimpse) -> Unit
 ) {
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+
+    val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
+        DetailPaneBreakpoint.EXPANDED
+    } else if (windowSizeClass.isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) {
+        DetailPaneBreakpoint.MEDIUM
+    } else {
+        DetailPaneBreakpoint.COMPACT
+    }
+
     LazyVerticalGrid(
         columns = when (detailPaneBreakpoint) {
             DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(125.dp)
@@ -169,22 +188,21 @@ fun GlimpseGrid(
             items = glimpses,
         ) {
             GlimpseCard(
-                glimpse = it,
                 modifier = Modifier,
-                watchingInfo = watchingInfo
+                glimpse = it,
+                onClickGlimpse = onClickGlimpse
             )
         }
     }
 }
 
 @Composable
-fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, watchingInfo: MutableState<WatchingInfo>) {
+fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) -> Unit) {
     Surface(
         modifier = modifier
             .clip(shape = MaterialTheme.shapes.medium)
             .clickable(true) {
-                watchingInfo.value = watchingInfo.value.copy(watching = true, glimpseWatching =
-                    glimpse)
+                onClickGlimpse(glimpse)
             },
         tonalElevation = 5.dp
     ) {
@@ -256,7 +274,7 @@ fun PreviewGlimpseCard() {
     GlimpseCard(
         modifier = Modifier,
         glimpse = glimpse,
-        watchingInfo = remember { mutableStateOf(WatchingInfo(false, null)) }
+        onClickGlimpse = { }
     )
 }
 
@@ -267,7 +285,6 @@ fun PreviewGlimpseGrid() {
         modifier = Modifier,
         glimpses = previewGlimpses,
         contentPadding = PaddingValues(0.dp),
-        detailPaneBreakpoint = DetailPaneBreakpoint.COMPACT,
-        watchingInfo = remember {  mutableStateOf(WatchingInfo(false, null)) }
+        onClickGlimpse = { }
     )
 }

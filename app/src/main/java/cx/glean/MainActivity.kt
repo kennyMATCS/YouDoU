@@ -1,15 +1,24 @@
 package cx.glean
 
-import android.app.Activity
 import android.os.Bundle
-import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedDispatcher
-import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.addCallback
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,31 +27,34 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowSizeClass
-import cx.glean.ui.glimpse.DetailPaneBreakpoint
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.GlimpseGrid
 import cx.glean.ui.glimpse.player.GlimpsePlayer
-import cx.glean.ui.glimpse.player.WatchingInfo
-import cx.glean.ui.glimpse.player.clear
 import cx.glean.ui.theme.GleanTheme
 import cx.glean.ui.glimpse.previewGlimpses
+import kotlinx.serialization.Serializable
 
-var watchingInfo: MutableState<WatchingInfo>? = null
+@Serializable
+object MainApp
 
+// TODO: speed up everything. overall we are slow.
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,18 +62,60 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GleanTheme {
-                GleanScaffold(
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .background(Color.Black),
-                    activity = this,
-                    glimpses = previewGlimpses)
+                val navController = rememberNavController()
+
+                NavHost(
+                    navController = navController,
+                    startDestination = MainApp,
+                    enterTransition = {
+                        slideInVertically(
+                            // Start the slide from 40 (pixels) above where the content is supposed to go, to
+                            // produce a parallax effect
+                            initialOffsetY = { -40 }
+                        ) + expandVertically(expandFrom = Alignment.CenterVertically) +
+                                scaleIn(
+                                    // Animate scale from 0f to 1f using the top center as the pivot point.
+                                    transformOrigin = TransformOrigin(0.5f, 0f)
+                                ) +
+                                fadeIn(initialAlpha = 0.3f)
+                    },
+                    exitTransition = {
+                        postponeEnterTransition()
+                        fadeOut()
+                    }
+                ) {
+                    composable<MainApp> {
+                        GleanScaffold(
+                            modifier = Modifier
+                                .windowInsetsPadding(WindowInsets.statusBars)
+                                .background(Color.Black),
+                            glimpses = previewGlimpses
+                        ) { glimpse ->
+                            navController.navigate(
+                                route = Glimpse(
+                                    glimpse.author,
+                                    glimpse.duration,
+                                    glimpse.thumbnail,
+                                    glimpse.contentDescription,
+                                    glimpse.time,
+                                    glimpse.video
+                                )
+                            )
+                        }
+                    }
+
+                    composable<Glimpse> { backStackEntry ->
+                        val glimpse: Glimpse = backStackEntry.toRoute()
+                        GlimpsePlayer(
+                            modifier = Modifier,
+                            window = window,
+                            glimpse = glimpse,
+                        ) {
+                            // navController.navigate(route = MainApp)
+                        }
+                    }
+                }
             }
-        }
-
-
-        onBackPressedDispatcher.addCallback {
-            watchingInfo?.clear()
         }
     }
 }
@@ -70,85 +124,66 @@ class MainActivity : ComponentActivity() {
 fun GleanScaffold(
     modifier: Modifier,
     glimpses: List<Glimpse> = listOf(),
-    activity: Activity
+    onClickGlimpse: (Glimpse) -> Unit
 ) {
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-
-    val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
-        DetailPaneBreakpoint.EXPANDED
-    } else if (windowSizeClass.isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
-            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) {
-        DetailPaneBreakpoint.MEDIUM
-    } else {
-        DetailPaneBreakpoint.COMPACT
-    }
-
     var start = AppDestinations.VIEW
     var currentDestination by rememberSaveable { mutableStateOf(start) }
 
-    watchingInfo = remember { mutableStateOf(WatchingInfo(false, null)) }
+    // TODO: proper dark mode. nav bar is white when is should be black
 
-    if (watchingInfo!!.value.watching) {
-        GlimpsePlayer(
-            modifier = Modifier,
-            window = activity.window,
-            watchingInfo = watchingInfo!!
-        )
-    } else {
-        // TODO: proper dark mode. nav bar is white when is should be black
-        NavigationSuiteScaffold(
-            modifier = modifier
-                .fillMaxSize(),
-            navigationSuiteItems = {
-                AppDestinations.entries.forEach {
-                    item(
-                        icon = {
-                            Icon(
-                                it.icon,
-                                contentDescription = stringResource(it.contentDescription)
-                            )
-                        },
-                        label = {
-                            Text(stringResource(it.label))
-                        },
-                        selected = (it == currentDestination),
-                        onClick = { currentDestination = it }
-                    )
-                }
+    NavigationSuiteScaffold(
+        modifier = modifier
+            .fillMaxSize(),
+        navigationSuiteItems = {
+            AppDestinations.entries.forEach {
+                item(
+                    icon = {
+                        Icon(
+                            it.icon,
+                            contentDescription = stringResource(it.contentDescription)
+                        )
+                    },
+                    label = {
+                        Text(stringResource(it.label))
+                    },
+                    selected = (it == currentDestination),
+                    onClick = { currentDestination = it }
+                )
             }
-        ) {
-            when (currentDestination) {
-                AppDestinations.RECORD -> { }
-                AppDestinations.VIEW -> {
-                    GlimpseGrid(
-                        modifier = Modifier,
-                        glimpses = glimpses,
-                        contentPadding = PaddingValues(10.dp),
-                        detailPaneBreakpoint = detailPaneBreakpoint,
-                        watchingInfo = watchingInfo!!,
-                    )
-                }
-                AppDestinations.INFO -> { }
-                AppDestinations.SETTINGS -> { }
+        }
+    ) {
+        when (currentDestination) {
+            AppDestinations.RECORD -> {}
+            AppDestinations.VIEW -> {
+                GlimpseGrid(
+                    modifier = Modifier,
+                    glimpses = glimpses,
+                    contentPadding = PaddingValues(10.dp),
+                    onClickGlimpse = onClickGlimpse
+                )
             }
+
+            AppDestinations.INFO -> {}
+            AppDestinations.SETTINGS -> {}
         }
     }
 }
 
-//fun Context.getActivity(): Activity? {
-//    var currentContext = this
-//    while (currentContext is ContextWrapper) {
-//        if (currentContext is Activity) {
-//            return currentContext
-//        }
-//        currentContext = currentContext.baseContext
-//    }
-//    return null
-//}
-//
-//@Preview
-//@Composable
-//fun PreviewScaffold() {
-//    GleanScaffold(Modifier, previewGlimpses, LocalContext.current.getActivity())
-//}
+@Preview
+@Composable
+fun PreviewScaffold() {
+    val navController = rememberNavController()
+
+    GleanScaffold(Modifier, previewGlimpses, onClickGlimpse = { glimpse ->
+        navController.navigate(
+            route = Glimpse(
+                glimpse.author,
+                glimpse.duration,
+                glimpse.thumbnail,
+                glimpse.contentDescription,
+                glimpse.time,
+                glimpse.video
+            )
+        )
+    })
+}

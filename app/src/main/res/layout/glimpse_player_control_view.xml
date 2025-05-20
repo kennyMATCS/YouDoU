@@ -35,7 +35,8 @@
             android:id="@id/exo_play_pause"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@null"/>
+            android:background="@null"
+            android:contentDescription="@string/exo_play_pause_content_description" />
 
     </LinearLayout>
 </merge>

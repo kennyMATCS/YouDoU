@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -20,17 +19,12 @@ import cx.glean.R
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.getUri
 
-data class WatchingInfo(var watching: Boolean, var glimpseWatching: Glimpse?)
-
-fun MutableState<WatchingInfo>.clear() {
-    value = value.copy(watching = false, glimpseWatching = null)
-}
-
 @Composable
 fun GlimpsePlayer(
     modifier: Modifier,
     window: Window,
-    watchingInfo: MutableState<WatchingInfo>
+    glimpse: Glimpse,
+    onVideoEndOrClose: () -> Unit
 ) {
     val context = LocalContext.current
     var exoPlayer = ExoPlayer.Builder(context)
@@ -38,15 +32,15 @@ fun GlimpsePlayer(
         .build()
     var windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-    exoPlayer.addListener(object : Player.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) {
-                watchingInfo.clear()
-            }
-        }
-    })
+//    exoPlayer.addListener(object : Player.Listener {
+//        override fun onPlaybackStateChanged(playbackState: Int) {
+//            if (playbackState == Player.STATE_ENDED) {
+//                onVideoEndOrClose()
+//            }
+//        }
+//    })
 
-    var mediaItem = MediaItem.fromUri(watchingInfo.value.glimpseWatching?.video!!.getUri
+    var mediaItem = MediaItem.fromUri(glimpse.video.getUri
         (context))
 
     LaunchedEffect(mediaItem) {
@@ -60,7 +54,7 @@ fun GlimpsePlayer(
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer.release()
-            watchingInfo.value = watchingInfo.value.copy(watching = false, glimpseWatching = null)
+            onVideoEndOrClose()
 
             windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
         }
@@ -72,7 +66,6 @@ fun GlimpsePlayer(
             (LayoutInflater.from(context).inflate(R.layout.glimpse_player_view,
                 null, false) as PlayerView).apply {
                 player = exoPlayer
-                // black background
             }
         },
         modifier = modifier
