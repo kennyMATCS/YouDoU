@@ -25,4 +25,17 @@
     <integer name="preview_10_seconds_until_expiration">72000</integer>
     <integer name="preview_11_seconds_until_expiration">79200</integer>
     <integer name="preview_12_seconds_until_expiration">86400</integer>
+
+    <integer name="preview_1_hearts">3</integer>
+    <integer name="preview_2_hearts">0</integer>
+    <integer name="preview_3_hearts">7</integer>
+    <integer name="preview_4_hearts">12</integer>
+    <integer name="preview_5_hearts">0</integer>
+    <integer name="preview_6_hearts">0</integer>
+    <integer name="preview_7_hearts">1</integer>
+    <integer name="preview_8_hearts">7</integer>
+    <integer name="preview_9_hearts">13</integer>
+    <integer name="preview_10_hearts">0</integer>
+    <integer name="preview_11_hearts">0</integer>
+    <integer name="preview_12_hearts">0</integer>
 </resources>

@@ -65,4 +65,6 @@
     <string name="preview_12_content_description">Placeholder image 12</string>
     <string name="preview_12_date">May 5, 12:48 p.m.</string>
     <string name="exo_play_pause_content_description">Play-pause button</string>
+
+    <string name="heart_content_description">Heart to favorite glimpses</string>
 </resources>

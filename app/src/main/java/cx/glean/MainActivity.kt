@@ -100,7 +100,8 @@ class MainActivity : ComponentActivity() {
                                     glimpse.contentDescription,
                                     glimpse.time,
                                     glimpse.video,
-                                    glimpse.secondsUntilExpiration
+                                    glimpse.secondsUntilExpiration,
+                                    glimpse.hearts
                                 )
                             )
                         }
@@ -185,7 +186,8 @@ fun PreviewScaffold() {
                 glimpse.contentDescription,
                 glimpse.time,
                 glimpse.video,
-                glimpse.secondsUntilExpiration
+                glimpse.secondsUntilExpiration,
+                glimpse.hearts
             )
         )
     })
