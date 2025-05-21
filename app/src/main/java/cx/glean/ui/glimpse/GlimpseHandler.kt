@@ -22,16 +22,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -39,7 +38,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import cx.glean.R
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
@@ -172,10 +174,16 @@ fun GlimpseGrid(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
     val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND, WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)) {
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
+            WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND
+        )
+    ) {
         DetailPaneBreakpoint.EXPANDED
-    } else if (windowSizeClass.isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
-            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) {
+    } else if (windowSizeClass.isAtLeastBreakpoint(
+            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
+        )
+    ) {
         DetailPaneBreakpoint.MEDIUM
     } else {
         DetailPaneBreakpoint.COMPACT
@@ -215,35 +223,76 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) 
             },
         tonalElevation = 5.dp
     ) {
-        Column (
+        Column(
             modifier = Modifier
                 .padding(4.dp)
                 .fillMaxSize()
         ) {
             Box {
-                val heightFactor: Float = (integerResource(glimpse
-                    .secondsUntilExpiration) / (60f * 24f))
-
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                color = Color(0, 0, 0, 100),
-                                size = Size(size.width * heightFactor, size.height)
-                            )
-                        }
                 )
 
                 Text(
                     text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
-                        "$hours:$minutes"
+                        String.format(Locale.US, "%02d:%02d", hours, minutes)
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
+                    modifier = modifier
+                        .padding(6.dp)
+                )
+
+                val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
+                var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
+
+                // TODO: change when expiration data isn't hardcoded
+                LaunchedEffect(Unit) {
+                    while (expirationSeconds > 0) {
+                        delay(1000L)
+                        expirationSeconds -= 1
+                    }
+                    cancel()
+                }
+
+                var color = when {
+                    expirationSeconds > (60 * 60 * 8) -> Color(0, 230, 118, 255)
+                    expirationSeconds > (60 * 60 * 1) -> Color(255, 234, 0, 255)
+                    else -> Color(229, 57, 53, 255)
+                }
+
+                Text(
+                    text = expirationSeconds.seconds.toComponents { hours, minutes, seconds, nanoseconds ->
+                        StringBuilder().apply {
+                            if (hours > 0) {
+                                append(
+                                    String.format(
+                                        Locale.US,
+                                        "%2d:", hours
+                                    )
+                                )
+                            }
+
+                            append(
+                                String.format(
+                                    Locale.US,
+                                    "%02d:", minutes
+                                )
+                            )
+
+                            append(
+                                String.format(
+                                    Locale.US,
+                                    "%02d", seconds
+                                )
+                            )
+                        }.toString()
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = color,
                     modifier = modifier
                         .align(Alignment.BottomStart)
                         .padding(6.dp)
@@ -275,7 +324,7 @@ enum class DetailPaneBreakpoint {
 
 fun Int.getUri(context: Context): Uri {
     val item = this
-    return with (context.resources) {
+    return with(context.resources) {
         Uri.Builder()
             .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
             .authority(getResourcePackageName(item))

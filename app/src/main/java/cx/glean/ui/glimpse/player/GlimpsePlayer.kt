@@ -13,6 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -34,13 +35,13 @@ fun GlimpsePlayer(
         .build()
     var windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-//    exoPlayer.addListener(object : Player.Listener {
-//        override fun onPlaybackStateChanged(playbackState: Int) {
-//            if (playbackState == Player.STATE_ENDED) {
-//                onVideoEndOrClose()
-//            }
-//        }
-//    })
+    exoPlayer.addListener(object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                onVideoEndOrClose()
+            }
+        }
+    })
 
     var mediaItem = MediaItem.fromUri(glimpse.video.getUri
         (context))
@@ -56,7 +57,6 @@ fun GlimpsePlayer(
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer.release()
-            onVideoEndOrClose()
 
             windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
         }

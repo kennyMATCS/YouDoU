@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
                             window = window,
                             glimpse = glimpse,
                         ) {
-                            // navController.navigate(route = MainApp)
+                            navController.navigate(route = MainApp)
                         }
                     }
                 }

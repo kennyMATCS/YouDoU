@@ -13,16 +13,16 @@
     <integer name="preview_11_duration">419</integer>
     <integer name="preview_12_duration">562</integer>
 
-    <integer name="preview_1_seconds_until_expiration">0</integer>
-    <integer name="preview_2_seconds_until_expiration">120</integer>
-    <integer name="preview_3_seconds_until_expiration">240</integer>
-    <integer name="preview_4_seconds_until_expiration">360</integer>
-    <integer name="preview_5_seconds_until_expiration">480</integer>
-    <integer name="preview_6_seconds_until_expiration">600</integer>
-    <integer name="preview_7_seconds_until_expiration">720</integer>
-    <integer name="preview_8_seconds_until_expiration">840</integer>
-    <integer name="preview_9_seconds_until_expiration">960</integer>
-    <integer name="preview_10_seconds_until_expiration">1080</integer>
-    <integer name="preview_11_seconds_until_expiration">1200</integer>
-    <integer name="preview_12_seconds_until_expiration">1320</integer>
+    <integer name="preview_1_seconds_until_expiration">60</integer>
+    <integer name="preview_2_seconds_until_expiration">3000</integer>
+    <integer name="preview_3_seconds_until_expiration">8000</integer>
+    <integer name="preview_4_seconds_until_expiration">60000</integer>
+    <integer name="preview_5_seconds_until_expiration">36000</integer>
+    <integer name="preview_6_seconds_until_expiration">43200</integer>
+    <integer name="preview_7_seconds_until_expiration">50400</integer>
+    <integer name="preview_8_seconds_until_expiration">57600</integer>
+    <integer name="preview_9_seconds_until_expiration">64800</integer>
+    <integer name="preview_10_seconds_until_expiration">72000</integer>
+    <integer name="preview_11_seconds_until_expiration">79200</integer>
+    <integer name="preview_12_seconds_until_expiration">86400</integer>
 </resources>
