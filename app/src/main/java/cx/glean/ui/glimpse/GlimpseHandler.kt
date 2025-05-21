@@ -3,25 +3,24 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,9 +41,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import cx.glean.R
 import kotlinx.coroutines.cancel
@@ -277,7 +276,7 @@ fun GlimpseCard(
 
                 val textStyle = MaterialTheme.typography.labelSmall
                 val behindShape = MaterialTheme.shapes.extraLarge
-                val behindPadding = 4.dp
+                val behindPadding = 5.dp
                 val behindColor = MaterialTheme.colorScheme.surfaceContainer
 
                 Image(
@@ -351,32 +350,46 @@ fun GlimpseCard(
                     )
                 }
 
-                val hearts = integerResource(glimpse.hearts)
-                Row(
+                val heartsVal = integerResource(glimpse.hearts)
+                var hearts by remember { mutableIntStateOf(heartsVal) }
+
+                val interactionSource = remember { MutableInteractionSource() }
+                Box(
                     modifier = Modifier
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {
+                            hearts++
+                        }
                         .align(Alignment.BottomEnd)
-                        .padding(cornerPadding)
-                        .alpha(if (hearts == 0) 0f else 1f)
-                        .clip(behindShape)
-                        .background(behindColor)
-                        .padding(behindPadding),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .width(80.dp)
+                        .height(80.dp)
                 ) {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        contentDescription = stringResource(R.string.heart_content_description),
-                        tint = Color(0xFFEA3323),
+                    Row(
                         modifier = Modifier
-                            .size(24.dp)
-                    )
+                            .align(Alignment.BottomEnd)
+                            .padding(cornerPadding)
+                            .alpha(if (hearts == 0) 0f else 1f)
+                            .clip(behindShape)
+                            .background(behindColor)
+                            .padding(behindPadding),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Filled.Favorite,
+                            contentDescription = stringResource(R.string.heart_content_description),
+                            tint = Color(0xFFEA3323),
+                        )
 
-                    // TODO: heart text. make ui better
+                        // TODO: heart text. make ui better
 
-                    Text(
-                        text = hearts.toString(),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                        Text(
+                            text = hearts.toString(),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             }
             Text(
