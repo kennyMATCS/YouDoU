@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -62,8 +64,6 @@ class MainActivity : ComponentActivity() {
                     startDestination = MainApp,
                     enterTransition = {
                         slideInVertically(
-                            // Start the slide from 40 (pixels) above where the content is supposed to go, to
-                            // produce a parallax effect
                             initialOffsetY = { -40 }
                         ) + expandVertically(expandFrom = Alignment.CenterVertically) +
                                 scaleIn(
@@ -74,8 +74,6 @@ class MainActivity : ComponentActivity() {
                     },
                     exitTransition = {
                         slideOutVertically(
-                            // Start the slide from 40 (pixels) above where the content is supposed to go, to
-                            // produce a parallax effect
                             targetOffsetY = { -40 }
                         ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
                                 scaleOut(
@@ -161,7 +159,7 @@ fun GleanScaffold(
                 GlimpseGrid(
                     modifier = Modifier,
                     glimpses = glimpses,
-                    contentPadding = PaddingValues(10.dp),
+                    contentPadding = PaddingValues(4.dp),
                     onClickGlimpse = onClickGlimpse
                 )
             }
@@ -172,7 +170,7 @@ fun GleanScaffold(
     }
 }
 
-@Preview
+@PreviewLightDark
 @Composable
 fun PreviewScaffold() {
     val navController = rememberNavController()

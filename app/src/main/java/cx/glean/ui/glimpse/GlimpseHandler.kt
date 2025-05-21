@@ -3,6 +3,7 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,11 +15,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,6 +44,8 @@ import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import cx.glean.R
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -215,7 +220,8 @@ fun GlimpseGrid(
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
         modifier = modifier
-            .padding(8.dp),
+            .padding(4.dp)
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -236,19 +242,26 @@ fun GlimpseGrid(
 }
 
 @Composable
-fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) -> Unit, onRemoveGlimpse: (Glimpse) -> Unit) {
+fun GlimpseCard(
+    modifier: Modifier,
+    glimpse: Glimpse,
+    onClickGlimpse: (Glimpse) -> Unit,
+    onRemoveGlimpse: (Glimpse) -> Unit
+) {
     Surface(
         modifier = modifier
-            .clip(shape = MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(2.dp)
             .clickable(true) {
                 onClickGlimpse(glimpse)
             },
-        tonalElevation = 5.dp
+        shadowElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(4.dp)
-                .fillMaxSize()
         ) {
             Box {
                 val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
@@ -260,18 +273,18 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) 
                     else -> Color(229, 57, 53, 255)
                 }
 
-                val cornerPadding = 6.dp
+                val cornerPadding = 5.dp
 
                 val textStyle = MaterialTheme.typography.labelSmall
-                val behindShape = MaterialTheme.shapes.small
-                val behindPadding = 3.dp
+                val behindShape = MaterialTheme.shapes.extraLarge
+                val behindPadding = 4.dp
                 val behindColor = MaterialTheme.colorScheme.surfaceContainer
 
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
-                        .clip(MaterialTheme.shapes.small)
+                        .clip(MaterialTheme.shapes.large)
                 )
 
                 // TODO: change when expiration data isn't hardcoded
@@ -285,9 +298,8 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) 
                     cancel()
                 }
 
-
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                     modifier = Modifier
                         .padding(cornerPadding)
                 ) {
@@ -340,46 +352,42 @@ fun GlimpseCard(modifier: Modifier, glimpse: Glimpse, onClickGlimpse: (Glimpse) 
                 }
 
                 val hearts = integerResource(glimpse.hearts)
-                Box(
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(cornerPadding)
                         .alpha(if (hearts == 0) 0f else 1f)
+                        .clip(behindShape)
+                        .background(behindColor)
+                        .padding(behindPadding),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Filled.Favorite,
                         contentDescription = stringResource(R.string.heart_content_description),
                         tint = Color(0xFFEA3323),
                         modifier = Modifier
-                            .clip(behindShape)
-                            .background(behindColor)
-                            .padding(behindPadding)
-
+                            .size(24.dp)
                     )
 
                     // TODO: heart text. make ui better
 
-//                    Text(
-//                        text = hearts.toString(),
-//                        modifier = Modifier
-//                            .align(Alignment.BottomEnd)
-//                    )
+                    Text(
+                        text = hearts.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
             }
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceAround,
+            Text(
+                text = stringResource(glimpse.time),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-
-                Text(
-                    text = stringResource(glimpse.time),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+                    .padding(top = 3.dp)
+            )
         }
     }
 }
