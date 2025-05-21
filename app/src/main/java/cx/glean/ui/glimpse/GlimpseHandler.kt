@@ -3,6 +3,7 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -222,8 +223,8 @@ fun GlimpseGrid(
             .padding(4.dp)
             .background(MaterialTheme.colorScheme.background),
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         items(
             items = mutableGlimpses,
@@ -254,11 +255,11 @@ fun GlimpseCard(
             .clickable(true) {
                 onClickGlimpse(glimpse)
             },
-        shadowElevation = 2.dp
+        shadowElevation = 5.dp,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier
-                .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(4.dp)
         ) {
@@ -277,13 +278,13 @@ fun GlimpseCard(
                 val textStyle = MaterialTheme.typography.labelSmall
                 val behindShape = MaterialTheme.shapes.extraLarge
                 val behindPadding = 5.dp
-                val behindColor = MaterialTheme.colorScheme.surfaceContainer
+                val behindColor = MaterialTheme.colorScheme.surface
 
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(MaterialTheme.shapes.medium)
                 )
 
                 // TODO: change when expiration data isn't hardcoded
@@ -302,17 +303,17 @@ fun GlimpseCard(
                     modifier = Modifier
                         .padding(cornerPadding)
                 ) {
-                    Text(
-                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
-                            String.format(Locale.US, "%d:%02d", hours, minutes)
-                        },
-                        style = textStyle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = modifier
-                            .clip(behindShape)
-                            .background(behindColor)
-                            .padding(behindPadding)
-                    )
+//                    Text(
+//                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
+//                            String.format(Locale.US, "%d:%02d", hours, minutes)
+//                        },
+//                        style = textStyle,
+//                        color = MaterialTheme.colorScheme.onSurface,
+//                        modifier = modifier
+//                            .clip(behindShape)
+//                            .background(behindColor)
+//                            .padding(behindPadding)
+//                    )
 
                     Text(
                         text = expirationSeconds.seconds.toComponents { hours, minutes, seconds, nanoseconds ->
@@ -363,8 +364,8 @@ fun GlimpseCard(
                             hearts++
                         }
                         .align(Alignment.BottomEnd)
-                        .width(80.dp)
-                        .height(80.dp)
+                        .width(70.dp)
+                        .height(70.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -436,13 +437,13 @@ fun PreviewGlimpseCard() {
     )
 }
 
-@Preview
+@Preview()
 @Composable
 fun PreviewGlimpseGrid() {
     GlimpseGrid(
         modifier = Modifier,
         glimpses = previewGlimpses,
-        contentPadding = PaddingValues(0.dp),
+        contentPadding = PaddingValues(4.dp),
         onClickGlimpse = { }
     )
 }
