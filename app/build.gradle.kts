@@ -44,6 +44,12 @@ android {
 
 
 dependencies {
+    val tilesVersion = "2.10.0"
+    //noinspection UseTomlInstead
+    implementation("com.github.alorma.compose-settings:ui-tiles:$tilesVersion")
+    //noinspection UseTomlInstead
+    implementation("com.github.alorma.compose-settings:ui-tiles-extended:$tilesVersion")
+
     implementation(libs.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.media3.exoplayer)

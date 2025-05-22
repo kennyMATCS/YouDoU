@@ -13,7 +13,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -31,7 +33,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +44,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -48,6 +53,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.alorma.compose.settings.ui.SettingsCheckbox
+import com.alorma.compose.settings.ui.SettingsGroup
+import com.alorma.compose.settings.ui.SettingsRadioButton
+import com.alorma.compose.settings.ui.SettingsSwitch
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.GlimpseGrid
 import cx.glean.ui.glimpse.player.GlimpsePlayer
@@ -59,12 +68,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 object MainApp
 
-// TODO: speed up everything. overall we are slow.
+@Serializable
+object Settings
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // TODO: fix white strip above scaffold suite
+        // TODO: dark mode
+        // TODO: code cleanup
 
         enableEdgeToEdge()
         setContent {
@@ -79,7 +91,6 @@ class MainActivity : ComponentActivity() {
                             initialOffsetY = { -40 }
                         ) + expandVertically(expandFrom = Alignment.CenterVertically) +
                                 scaleIn(
-                                    // Animate scale from 0f to 1f using the top center as the pivot point.
                                     transformOrigin = TransformOrigin(0.5f, 0f)
                                 ) +
                                 fadeIn(initialAlpha = 0.3f)
@@ -89,7 +100,6 @@ class MainActivity : ComponentActivity() {
                             targetOffsetY = { -40 }
                         ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
                                 scaleOut(
-                                    // Animate scale from 0f to 1f using the top center as the pivot point.
                                     transformOrigin = TransformOrigin(0.5f, 0f)
                                 ) +
                                 fadeOut(targetAlpha = 0.3f)
@@ -97,7 +107,8 @@ class MainActivity : ComponentActivity() {
                 ) {
 
                     composable<MainApp> {
-                        var windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+                        var windowInsetsController =
+                            WindowCompat.getInsetsController(window, window.decorView)
 
                         with(windowInsetsController) {
                             show(WindowInsetsCompat.Type.systemBars())
@@ -105,21 +116,23 @@ class MainActivity : ComponentActivity() {
 
                         GleanScaffold(
                             modifier = Modifier,
-                            glimpses = previewGlimpses
-                        ) { glimpse ->
-                            navController.navigate(
-                                route = Glimpse(
-                                    glimpse.author,
-                                    glimpse.duration,
-                                    glimpse.thumbnail,
-                                    glimpse.contentDescription,
-                                    glimpse.time,
-                                    glimpse.video,
-                                    glimpse.secondsUntilExpiration,
-                                    glimpse.hearts
+                            glimpses = previewGlimpses,
+                            onClickGlimpse = { glimpse ->
+                                navController.navigate(
+                                    route = Glimpse(
+                                        glimpse.author,
+                                        glimpse.duration,
+                                        glimpse.thumbnail,
+                                        glimpse.contentDescription,
+                                        glimpse.time,
+                                        glimpse.video,
+                                        glimpse.secondsUntilExpiration,
+                                        glimpse.hearts
+                                    )
                                 )
-                            )
-                        }
+                            }, onClickSettings = {
+                                navController.navigate(Settings)
+                            })
                     }
 
                     composable<Glimpse> { backStackEntry ->
@@ -132,6 +145,10 @@ class MainActivity : ComponentActivity() {
                             navController.navigate(route = MainApp)
                         }
                     }
+
+                    composable<Settings> {
+                        GleanSettings(modifier = Modifier)
+                    }
                 }
             }
         }
@@ -143,7 +160,8 @@ class MainActivity : ComponentActivity() {
 fun GleanScaffold(
     modifier: Modifier,
     glimpses: List<Glimpse> = listOf(),
-    onClickGlimpse: (Glimpse) -> Unit
+    onClickGlimpse: (Glimpse) -> Unit,
+    onClickSettings: () -> Unit
 ) {
     var start = AppDestinations.VIEW
     var currentDestination by rememberSaveable { mutableStateOf(start) }
@@ -179,7 +197,7 @@ fun GleanScaffold(
     ) {
         Scaffold(
             topBar = {
-                GleanTopBar()
+                GleanTopBar(onClickSettings)
             }
         ) { innerPadding ->
             HorizontalPager(
@@ -194,6 +212,7 @@ fun GleanScaffold(
                             contentPadding = innerPadding
                         )
                     }
+
                     AppDestinations.VIEW.pageNumber -> {
                         GlimpseGrid(
                             modifier = Modifier,
@@ -228,7 +247,7 @@ private fun Color.gradient(): Brush {
 @OptIn(ExperimentalMaterial3Api::class)
 @PreviewLightDark
 @Composable
-fun GleanTopBar() {
+fun GleanTopBar(onClickSettings: () -> Unit = { }) {
     val color = MaterialTheme.colorScheme.primaryContainer
 
     Surface(
@@ -249,6 +268,9 @@ fun GleanTopBar() {
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(horizontal = 10.dp)
+                        .clickable {
+                            onClickSettings()
+                        }
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -262,23 +284,87 @@ fun GleanTopBar() {
 
 }
 
+@Preview
+@Composable
+fun GleanSettings(modifier: Modifier = Modifier) {
+    Scaffold (
+        modifier = Modifier
+            .fillMaxSize()
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+        ) {
+            var switchState by remember { mutableStateOf(false) }
+            var checkBoxState by remember { mutableStateOf(false) }
+            var radioState by remember { mutableIntStateOf(0) }
+
+            Column {
+                SettingsGroup {
+                    SettingsSwitch(
+                        state = switchState,
+                        title = { Text("Test Switch") }
+                    ) {
+                        switchState = !switchState
+                    }
+
+                    SettingsCheckbox(
+                        state = checkBoxState,
+                        title = { Text("Test Checkbox") }
+                    ) {
+                        checkBoxState =  !checkBoxState
+                    }
+                }
+
+                SettingsGroup{
+                    SettingsRadioButton (
+                        state = radioState == 0,
+                        title = { Text("Option 1") }
+                    ) {
+                        radioState = 0
+                    }
+
+                    SettingsRadioButton (
+                        state = radioState == 1,
+                        title = { Text("Option 2") }
+                    ) {
+                        radioState = 1
+                    }
+
+                    SettingsRadioButton (
+                        state = radioState == 2,
+                        title = { Text("Option 3") }
+                    ) {
+                        radioState = 2
+                    }
+                }
+            }
+        }
+    }
+}
+
 @PreviewLightDark
 @Composable
 fun PreviewScaffold() {
     val navController = rememberNavController()
 
-    GleanScaffold(Modifier, previewGlimpses, onClickGlimpse = { glimpse ->
-        navController.navigate(
-            route = Glimpse(
-                glimpse.author,
-                glimpse.duration,
-                glimpse.thumbnail,
-                glimpse.contentDescription,
-                glimpse.time,
-                glimpse.video,
-                glimpse.secondsUntilExpiration,
-                glimpse.hearts
+    GleanScaffold(
+        Modifier,
+        previewGlimpses,
+        onClickGlimpse = { glimpse ->
+            navController.navigate(
+                route = Glimpse(
+                    glimpse.author,
+                    glimpse.duration,
+                    glimpse.thumbnail,
+                    glimpse.contentDescription,
+                    glimpse.time,
+                    glimpse.video,
+                    glimpse.secondsUntilExpiration,
+                    glimpse.hearts
+                )
             )
-        )
-    })
+        }, onClickSettings = {
+            navController.navigate(Settings)
+        })
 }
