@@ -208,13 +208,11 @@ var previewGlimpses = listOf(
 
 @Composable
 fun GlimpseGrid(
-    modifier: Modifier, glimpses: List<Glimpse>, contentPadding: PaddingValues, onClickGlimpse:
+    modifier: Modifier, glimpses: MutableList<Glimpse>, contentPadding: PaddingValues,
+    onClickGlimpse:
         (Glimpse) -> Unit
 ) {
-    var mutableGlimpses = glimpses
-
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-
     val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
             WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
             WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND
@@ -245,14 +243,14 @@ fun GlimpseGrid(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         items(
-            items = mutableGlimpses,
+            items = glimpses,
         ) {
             GlimpseCard(
                 modifier = Modifier,
                 glimpse = it,
                 onClickGlimpse = onClickGlimpse,
                 onRemoveGlimpse = { glimpse ->
-                    // TODO: actual working logic, when things are hardcoded fix
+                    // glimpses.remove(glimpse)
                 }
             )
         }
@@ -389,18 +387,12 @@ fun GlimpseCard(
                 val heartsVal = integerResource(glimpse.hearts)
                 var hearts by remember { mutableIntStateOf(heartsVal) }
 
-                val interactionSource = remember { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {
+                        .clickable {
                             hearts++
                         }
                         .align(Alignment.BottomEnd)
-                        .width(70.dp)
-                        .height(70.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -477,7 +469,7 @@ fun PreviewGlimpseCard() {
 fun PreviewGlimpseGrid() {
     GlimpseGrid(
         modifier = Modifier,
-        glimpses = previewGlimpses,
+        glimpses = previewGlimpses.toMutableList(),
         contentPadding = PaddingValues(4.dp),
         onClickGlimpse = { }
     )

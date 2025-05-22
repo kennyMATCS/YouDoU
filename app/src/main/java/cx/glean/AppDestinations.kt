@@ -3,7 +3,6 @@ package cx.glean
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -11,9 +10,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 enum class AppDestinations(
     @StringRes val label: Int,
     val icon: ImageVector,
-    @StringRes val contentDescription: Int
+    @StringRes val contentDescription: Int,
+    val pageNumber: Int
 ) {
-    RECORD(R.string.destination_record, Icons.Filled.AddCircle, contentDescription = R.string.destination_record),
-    VIEW(R.string.destination_view, Icons.Filled.Star, contentDescription = R.string.destination_view),
-    SETTINGS(R.string.destination_settings, Icons.Filled.Settings, contentDescription = R.string.destination_settings),
+    RECORD(R.string.destination_record, Icons.Filled.AddCircle, contentDescription = R.string.destination_record, 0),
+    VIEW(R.string.destination_view, Icons.Filled.Star, contentDescription = R.string.destination_view, 1),
 }

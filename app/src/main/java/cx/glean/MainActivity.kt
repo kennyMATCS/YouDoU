@@ -13,9 +13,14 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +41,10 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -86,7 +95,14 @@ class MainActivity : ComponentActivity() {
                                 fadeOut(targetAlpha = 0.3f)
                     }
                 ) {
+
                     composable<MainApp> {
+                        var windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+
+                        with(windowInsetsController) {
+                            show(WindowInsetsCompat.Type.systemBars())
+                        }
+
                         GleanScaffold(
                             modifier = Modifier,
                             glimpses = previewGlimpses
@@ -133,6 +149,9 @@ fun GleanScaffold(
 ) {
     var start = AppDestinations.VIEW
     var currentDestination by rememberSaveable { mutableStateOf(start) }
+    var pagerState = rememberPagerState(initialPage = start.pageNumber) {
+        AppDestinations.entries.size
+    }
 
     // TODO: proper dark mode. nav bar is white when is should be black
 
@@ -152,26 +171,38 @@ fun GleanScaffold(
                         Text(stringResource(it.label))
                     },
                     selected = (it == currentDestination),
-                    onClick = { currentDestination = it }
+                    onClick = {
+                        currentDestination = it
+                        pagerState.requestScrollToPage(currentDestination.pageNumber)
+                    }
                 )
             }
         }
     ) {
         Scaffold { innerPadding ->
-            when (currentDestination) {
-                AppDestinations.RECORD -> {}
-                AppDestinations.VIEW -> {
-                    GlimpseGrid(
-                        modifier = Modifier,
-                        glimpses = glimpses,
-                        contentPadding = innerPadding,
-                        onClickGlimpse = onClickGlimpse
-                    )
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+                contentPadding = PaddingValues(4.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+            ) { page ->
+                when (page) {
+                    AppDestinations.RECORD.pageNumber -> {}
+                    AppDestinations.VIEW.pageNumber -> {
+                        GlimpseGrid(
+                            modifier = Modifier,
+                            glimpses = glimpses.toMutableList(),
+                            contentPadding = innerPadding,
+                            onClickGlimpse = onClickGlimpse
+                        )
+                    }
                 }
-                AppDestinations.SETTINGS -> {}
+
+                // pretty hardcoded, but this should be okay
+                currentDestination = AppDestinations.entries[pagerState.currentPage]
             }
         }
-
     }
 }
 
