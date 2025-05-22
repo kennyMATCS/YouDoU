@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,74 +81,80 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            GleanTheme {
-                val navController = rememberNavController()
-
-                NavHost(
-                    navController = navController,
-                    startDestination = MainApp,
-                    enterTransition = {
-                        slideInVertically(
-                            initialOffsetY = { -40 }
-                        ) + expandVertically(expandFrom = Alignment.CenterVertically) +
-                                scaleIn(
-                                    transformOrigin = TransformOrigin(0.5f, 0f)
-                                ) +
-                                fadeIn(initialAlpha = 0.3f)
-                    },
-                    exitTransition = {
-                        slideOutVertically(
-                            targetOffsetY = { -40 }
-                        ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
-                                scaleOut(
-                                    transformOrigin = TransformOrigin(0.5f, 0f)
-                                ) +
-                                fadeOut(targetAlpha = 0.3f)
-                    }
+            GleanTheme() {
+                Box(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .fillMaxSize(),
                 ) {
+                    val navController = rememberNavController()
 
-                    composable<MainApp> {
-                        var windowInsetsController =
-                            WindowCompat.getInsetsController(window, window.decorView)
-
-                        with(windowInsetsController) {
-                            show(WindowInsetsCompat.Type.systemBars())
+                    NavHost(
+                        navController = navController,
+                        startDestination = MainApp,
+                        enterTransition = {
+                            slideInVertically(
+                                initialOffsetY = { -40 }
+                            ) + expandVertically(expandFrom = Alignment.CenterVertically) +
+                                    scaleIn(
+                                        transformOrigin = TransformOrigin(0.5f, 0f)
+                                    ) +
+                                    fadeIn(initialAlpha = 0.3f)
+                        },
+                        exitTransition = {
+                            slideOutVertically(
+                                targetOffsetY = { -40 }
+                            ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
+                                    scaleOut(
+                                        transformOrigin = TransformOrigin(0.5f, 0f)
+                                    ) +
+                                    fadeOut(targetAlpha = 0.3f)
                         }
+                    ) {
 
-                        GleanScaffold(
-                            modifier = Modifier,
-                            glimpses = previewGlimpses,
-                            onClickGlimpse = { glimpse ->
-                                navController.navigate(
-                                    route = Glimpse(
-                                        glimpse.author,
-                                        glimpse.duration,
-                                        glimpse.thumbnail,
-                                        glimpse.contentDescription,
-                                        glimpse.time,
-                                        glimpse.video,
-                                        glimpse.secondsUntilExpiration,
-                                        glimpse.hearts
+                        composable<MainApp> {
+                            var windowInsetsController =
+                                WindowCompat.getInsetsController(window, window.decorView)
+
+                            with(windowInsetsController) {
+                                show(WindowInsetsCompat.Type.systemBars())
+                            }
+
+                            GleanScaffold(
+                                modifier = Modifier,
+                                glimpses = previewGlimpses,
+                                onClickGlimpse = { glimpse ->
+                                    navController.navigate(
+                                        route = Glimpse(
+                                            glimpse.author,
+                                            glimpse.duration,
+                                            glimpse.thumbnail,
+                                            glimpse.contentDescription,
+                                            glimpse.time,
+                                            glimpse.video,
+                                            glimpse.secondsUntilExpiration,
+                                            glimpse.hearts
+                                        )
                                     )
-                                )
-                            }, onClickSettings = {
-                                navController.navigate(Settings)
-                            })
-                    }
-
-                    composable<Glimpse> { backStackEntry ->
-                        val glimpse: Glimpse = backStackEntry.toRoute()
-                        GlimpsePlayer(
-                            modifier = Modifier,
-                            window = window,
-                            glimpse = glimpse,
-                        ) {
-                            navController.navigate(route = MainApp)
+                                }, onClickSettings = {
+                                    navController.navigate(Settings)
+                                })
                         }
-                    }
 
-                    composable<Settings> {
-                        GleanSettings(modifier = Modifier)
+                        composable<Glimpse> { backStackEntry ->
+                            val glimpse: Glimpse = backStackEntry.toRoute()
+                            GlimpsePlayer(
+                                modifier = Modifier,
+                                window = window,
+                                glimpse = glimpse,
+                            ) {
+                                navController.navigate(route = MainApp)
+                            }
+                        }
+
+                        composable<Settings> {
+                            GleanSettings(modifier = Modifier)
+                        }
                     }
                 }
             }
@@ -168,9 +175,6 @@ fun GleanScaffold(
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
         AppDestinations.entries.size
     }
-
-    // TODO: proper dark mode. nav bar is white when is should be black
-
     NavigationSuiteScaffold(
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.primary,
@@ -287,7 +291,7 @@ fun GleanTopBar(onClickSettings: () -> Unit = { }) {
 @Preview
 @Composable
 fun GleanSettings(modifier: Modifier = Modifier) {
-    Scaffold (
+    Scaffold(
         modifier = Modifier
             .fillMaxSize()
     ) { innerPadding ->
@@ -312,26 +316,26 @@ fun GleanSettings(modifier: Modifier = Modifier) {
                         state = checkBoxState,
                         title = { Text("Test Checkbox") }
                     ) {
-                        checkBoxState =  !checkBoxState
+                        checkBoxState = !checkBoxState
                     }
                 }
 
-                SettingsGroup{
-                    SettingsRadioButton (
+                SettingsGroup {
+                    SettingsRadioButton(
                         state = radioState == 0,
                         title = { Text("Option 1") }
                     ) {
                         radioState = 0
                     }
 
-                    SettingsRadioButton (
+                    SettingsRadioButton(
                         state = radioState == 1,
                         title = { Text("Option 2") }
                     ) {
                         radioState = 1
                     }
 
-                    SettingsRadioButton (
+                    SettingsRadioButton(
                         state = radioState == 2,
                         title = { Text("Option 3") }
                     ) {
