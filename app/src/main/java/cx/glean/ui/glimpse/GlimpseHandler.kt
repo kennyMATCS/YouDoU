@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -54,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.LayoutDirection
 import cx.glean.R
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -229,16 +231,24 @@ fun GlimpseGrid(
         DetailPaneBreakpoint.COMPACT
     }
 
+    val pad = 8.dp
     LazyVerticalGrid(
         columns = when (detailPaneBreakpoint) {
-            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(125.dp)
+            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(150.dp)
             DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(4)
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
         modifier = modifier
-            .padding(8.dp)
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = contentPadding,
+        contentPadding = with(contentPadding) {
+            PaddingValues(
+                top = calculateTopPadding() + pad,
+                bottom = calculateBottomPadding() + pad,
+                start = calculateLeftPadding(LayoutDirection.Ltr) + pad,
+                end = calculateRightPadding(LayoutDirection.Rtl) + pad
+            )
+        },
+
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

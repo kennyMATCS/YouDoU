@@ -12,20 +12,22 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,17 +36,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -54,6 +53,7 @@ import cx.glean.ui.glimpse.GlimpseGrid
 import cx.glean.ui.glimpse.player.GlimpsePlayer
 import cx.glean.ui.theme.GleanTheme
 import cx.glean.ui.glimpse.previewGlimpses
+import cx.glean.ui.glimpse.record.GlimpseCamera
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -120,8 +120,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             )
                         }
-
-                        StatusBarProtection()
                     }
 
                     composable<Glimpse> { backStackEntry ->
@@ -156,8 +154,8 @@ fun GleanScaffold(
     // TODO: proper dark mode. nav bar is white when is should be black
 
     NavigationSuiteScaffold(
-        modifier = modifier
-            .fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.primary,
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
                 item(
@@ -179,16 +177,23 @@ fun GleanScaffold(
             }
         }
     ) {
-        Scaffold { innerPadding ->
+        Scaffold(
+            topBar = {
+                GleanTopBar()
+            }
+        ) { innerPadding ->
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
-                contentPadding = PaddingValues(4.dp),
                 modifier = Modifier
                     .fillMaxSize()
             ) { page ->
                 when (page) {
-                    AppDestinations.RECORD.pageNumber -> {}
+                    AppDestinations.RECORD.pageNumber -> {
+                        GlimpseCamera(
+                            modifier = Modifier,
+                            contentPadding = innerPadding
+                        )
+                    }
                     AppDestinations.VIEW.pageNumber -> {
                         GlimpseGrid(
                             modifier = Modifier,
@@ -206,38 +211,55 @@ fun GleanScaffold(
     }
 }
 
-@Composable
-private fun StatusBarProtection(
-    color: Color = MaterialTheme.colorScheme.surfaceContainer,
-    heightProvider: () -> Float = calculateGradientHeight(),
-) {
-
-    Canvas(Modifier.fillMaxSize()) {
-        val calculatedHeight = heightProvider()
-        val gradient = Brush.verticalGradient(
-            colors = listOf(
-                color.copy(alpha = 1f),
-                color.copy(alpha = .8f),
-                color.copy(alpha = .6f),
-                color.copy(alpha = .4f),
-                color.copy(alpha = .2f),
-                Color.Transparent
-            ),
-            startY = 0f,
-            endY = calculatedHeight
-        )
-        drawRect(
-            brush = gradient,
-            size = Size(size.width, calculatedHeight),
-        )
-    }
+private fun Color.gradient(): Brush {
+    return Brush.verticalGradient(
+        colors = listOf(
+            copy(alpha = 1f),
+            copy(alpha = .8f),
+            copy(alpha = .6f),
+            copy(alpha = .4f),
+            copy(alpha = .2f),
+            Color.Transparent
+        ),
+        startY = 0f,
+    )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewLightDark
 @Composable
-fun calculateGradientHeight(): () -> Float {
-    val statusBars = WindowInsets.statusBars
-    val density = LocalDensity.current
-    return { statusBars.getTop(density).times(1.2f) }
+fun GleanTopBar() {
+    val color = MaterialTheme.colorScheme.primaryContainer
+
+    Surface(
+        shadowElevation = 10.dp,
+    ) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "glean",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.headlineLarge
+                )
+            },
+            actions = {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp)
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            ),
+            modifier = Modifier
+                .background(color.gradient()),
+            expandedHeight = 55.dp
+        )
+    }
+
 }
 
 @PreviewLightDark
