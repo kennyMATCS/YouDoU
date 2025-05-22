@@ -3,10 +3,10 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,10 +44,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import cx.glean.R
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -65,6 +73,16 @@ data class Glimpse(
     val hearts: Int
 )
 
+data class DropDownItem(
+    val text: String,
+    val color: Color,
+    val onItemClick: () -> Unit
+)
+
+// TODO: add functionality
+val dropDownItems = listOf(
+    DropDownItem("Report", color = Color.Red, onItemClick = { }),
+)
 var previewGlimpses = listOf(
     Glimpse(
         author = R.string.preview_1_name,
@@ -220,7 +238,7 @@ fun GlimpseGrid(
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
         modifier = modifier
-            .padding(4.dp)
+            .padding(8.dp)
             .background(MaterialTheme.colorScheme.background),
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -246,18 +264,35 @@ fun GlimpseCard(
     modifier: Modifier,
     glimpse: Glimpse,
     onClickGlimpse: (Glimpse) -> Unit,
-    onRemoveGlimpse: (Glimpse) -> Unit
+    onRemoveGlimpse: (Glimpse) -> Unit,
 ) {
+    var isContextMenuVisible = remember { mutableStateOf(false) }
+    var contextMenuOffset = remember { mutableStateOf(Offset.Zero) }
+
     Surface(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
-            .padding(2.dp)
-            .clickable(true) {
-                onClickGlimpse(glimpse)
+            .padding(5.dp)
+            .combinedClickable(
+                true,
+                onClick = {
+                    onClickGlimpse(glimpse)
+                },
+                onLongClick = {
+                    isContextMenuVisible.value = true
+                }
+            )
+            .pointerInteropFilter {
+                contextMenuOffset.value = Offset(it.x, it.y)
+                false
             },
         shadowElevation = 5.dp,
         shape = MaterialTheme.shapes.large,
     ) {
+        Box {
+            GleanDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset)
+        }
+
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface)
@@ -433,7 +468,7 @@ fun PreviewGlimpseCard() {
         modifier = Modifier,
         glimpse = glimpse,
         onClickGlimpse = { },
-        onRemoveGlimpse = { }
+        onRemoveGlimpse = { },
     )
 }
 
@@ -446,4 +481,39 @@ fun PreviewGlimpseGrid() {
         contentPadding = PaddingValues(4.dp),
         onClickGlimpse = { }
     )
+}
+
+@Composable
+fun GleanDropDown(
+    dropDownItems: List<DropDownItem>,
+    isContextMenuVisible: MutableState<Boolean>,
+    contextMenuOffset: MutableState<Offset>
+) {
+    val density = LocalDensity.current
+    val dpOffset = with(density) { DpOffset(contextMenuOffset.value.x.toDp(), contextMenuOffset
+        .value.y.toDp()) }
+
+    DropdownMenu(
+        expanded = isContextMenuVisible.value,
+        onDismissRequest = {
+            isContextMenuVisible.value = false
+        },
+        offset = dpOffset
+    ) {
+        dropDownItems.forEach {
+            DropdownMenuItem(
+                onClick = {
+                    it.onItemClick
+                    isContextMenuVisible.value = false
+                },
+                text = {
+                    Text(
+                        text = it.text,
+                        color = it.color,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            )
+        }
+    }
 }

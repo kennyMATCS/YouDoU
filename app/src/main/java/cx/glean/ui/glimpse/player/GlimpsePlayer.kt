@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -47,18 +48,24 @@ fun GlimpsePlayer(
         (context))
 
     LaunchedEffect(mediaItem) {
+        with (windowInsetsController) {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
         exoPlayer.play()
-
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            exoPlayer.release()
+            with (windowInsetsController) {
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                show(WindowInsetsCompat.Type.systemBars())
+            }
 
-            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            exoPlayer.release()
         }
     }
 
