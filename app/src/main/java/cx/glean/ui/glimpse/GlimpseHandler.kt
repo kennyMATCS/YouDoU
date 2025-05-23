@@ -2,7 +2,18 @@ package cx.glean.ui.glimpse
 
 import android.content.ContentResolver
 import android.content.Context
+import android.media.Image
 import android.net.Uri
+import androidx.compose.animation.core.EaseInOutBounce
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +30,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -47,8 +59,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -342,18 +357,6 @@ fun GlimpseCard(
                     modifier = Modifier
                         .padding(cornerPadding)
                 ) {
-//                    Text(
-//                        text = integerResource(glimpse.duration).seconds.toComponents { hours, minutes, seconds ->
-//                            String.format(Locale.US, "%d:%02d", hours, minutes)
-//                        },
-//                        style = textStyle,
-//                        color = MaterialTheme.colorScheme.onSurface,
-//                        modifier = modifier
-//                            .clip(behindShape)
-//                            .background(behindColor)
-//                            .padding(behindPadding)
-//                    )
-
                     Text(
                         text = expirationSeconds.seconds.toComponents { hours, minutes, seconds, nanoseconds ->
                             StringBuilder().apply {
@@ -400,30 +403,54 @@ fun GlimpseCard(
                         }
                         .align(Alignment.BottomEnd)
                 ) {
+                    val color: Brush =
+                        if (hearts == 0) ShimmerAnimation(behindColor) else
+                            Brush.linearGradient(
+                                colors = listOf(behindColor, behindColor)
+                            )
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(cornerPadding)
-                            .alpha(if (hearts == 0) 0f else 1f)
                             .clip(behindShape)
-                            .background(behindColor)
+                            .background(color)
                             .padding(behindPadding),
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        val icon: ImageVector
+                        val tint: Color
+
+                        when (hearts) {
+                            0 -> {
+                                icon = ImageVector.vectorResource(
+                                    R.drawable
+                                        .outline_favorite)
+                                tint = MaterialTheme.colorScheme.onSurface
+                            }
+                            else -> {
+                                icon = Icons.Filled.Favorite
+                                tint = Color(0xFFEA3323)
+                            }
+                        }
+
                         Icon(
-                            Icons.Filled.Favorite,
-                            contentDescription = stringResource(R.string.heart_content_description),
-                            tint = Color(0xFFEA3323),
+                            imageVector = icon,
+                            contentDescription = stringResource (R.string
+                                .heart_content_description),
+                            tint = tint
                         )
 
-                        Text(
-                            text = hearts.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                        if (hearts > 0) {
+                            Text(
+                                text = hearts.toString(),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
             }
+
             Text(
                 text = stringResource(glimpse.time),
                 style = MaterialTheme.typography.labelLarge,
@@ -432,6 +459,76 @@ fun GlimpseCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 3.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ShimmerAnimation(color: Color): Brush {
+    val transition = rememberInfiniteTransition()
+
+    val shimmer = listOf(
+        color.copy(alpha = 1f),
+        color.copy(alpha = 0.7f),
+        color.copy(alpha = 1f)
+    )
+
+    val translateAnimation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1200f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1300,
+                easing = FastOutSlowInEasing,
+                delayMillis = 2000
+            ),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmer,
+        end = Offset(translateAnimation, translateAnimation)
+    )
+
+    return brush
+}
+
+@Composable
+fun GleanDropDown(
+    dropDownItems: List<DropDownItem>,
+    isContextMenuVisible: MutableState<Boolean>,
+    contextMenuOffset: MutableState<Offset>
+) {
+    val density = LocalDensity.current
+    val dpOffset = with(density) {
+        DpOffset(
+            contextMenuOffset.value.x.toDp(), contextMenuOffset
+                .value.y.toDp()
+        )
+    }
+
+    DropdownMenu(
+        expanded = isContextMenuVisible.value,
+        onDismissRequest = {
+            isContextMenuVisible.value = false
+        },
+        offset = dpOffset
+    ) {
+        dropDownItems.forEach {
+            DropdownMenuItem(
+                onClick = {
+                    it.onItemClick
+                    isContextMenuVisible.value = false
+                },
+                text = {
+                    Text(
+                        text = it.text,
+                        color = it.color,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             )
         }
     }
@@ -477,39 +574,4 @@ fun PreviewGlimpseGrid() {
         contentPadding = PaddingValues(4.dp),
         onClickGlimpse = { }
     )
-}
-
-@Composable
-fun GleanDropDown(
-    dropDownItems: List<DropDownItem>,
-    isContextMenuVisible: MutableState<Boolean>,
-    contextMenuOffset: MutableState<Offset>
-) {
-    val density = LocalDensity.current
-    val dpOffset = with(density) { DpOffset(contextMenuOffset.value.x.toDp(), contextMenuOffset
-        .value.y.toDp()) }
-
-    DropdownMenu(
-        expanded = isContextMenuVisible.value,
-        onDismissRequest = {
-            isContextMenuVisible.value = false
-        },
-        offset = dpOffset
-    ) {
-        dropDownItems.forEach {
-            DropdownMenuItem(
-                onClick = {
-                    it.onItemClick
-                    isContextMenuVisible.value = false
-                },
-                text = {
-                    Text(
-                        text = it.text,
-                        color = it.color,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            )
-        }
-    }
 }

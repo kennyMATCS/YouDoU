@@ -1,7 +1,7 @@
 package cx.glean.ui.glimpse.player
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
-import android.view.Window
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -10,23 +10,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import cx.glean.R
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.getUri
 
-@OptIn(UnstableApi::class)
+@SuppressLint("InflateParams")
 @Composable
 fun GlimpsePlayer(
-    modifier: Modifier,
-    window: Window,
     glimpse: Glimpse,
     onVideoEndOrClose: () -> Unit
 ) {
@@ -34,7 +28,6 @@ fun GlimpsePlayer(
     var exoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
         .build()
-    var windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
     exoPlayer.addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -48,11 +41,6 @@ fun GlimpsePlayer(
         (context))
 
     LaunchedEffect(mediaItem) {
-        with (windowInsetsController) {
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsetsCompat.Type.systemBars())
-        }
-
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
         exoPlayer.play()
@@ -60,11 +48,6 @@ fun GlimpsePlayer(
 
     DisposableEffect(Unit) {
         onDispose {
-            with (windowInsetsController) {
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-                show(WindowInsetsCompat.Type.systemBars())
-            }
-
             exoPlayer.release()
         }
     }
@@ -75,10 +58,9 @@ fun GlimpsePlayer(
             (LayoutInflater.from(context).inflate(R.layout.glimpse_player_view,
                 null, false) as PlayerView).apply {
                 player = exoPlayer
-                setKeepContentOnPlayerReset(true)
             }
         },
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
     )
 }

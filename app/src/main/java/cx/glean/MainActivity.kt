@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,7 +15,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +50,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -76,12 +77,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // TODO: dark mode
-        // TODO: code cleanup
-
         enableEdgeToEdge()
         setContent {
-            GleanTheme() {
+            GleanTheme {
                 Box(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.background)
@@ -92,6 +90,7 @@ class MainActivity : ComponentActivity() {
                     NavHost(
                         navController = navController,
                         startDestination = MainApp,
+
                         enterTransition = {
                             slideInVertically(
                                 initialOffsetY = { -40 }
@@ -101,6 +100,7 @@ class MainActivity : ComponentActivity() {
                                     ) +
                                     fadeIn(initialAlpha = 0.3f)
                         },
+
                         exitTransition = {
                             slideOutVertically(
                                 targetOffsetY = { -40 }
@@ -109,51 +109,46 @@ class MainActivity : ComponentActivity() {
                                         transformOrigin = TransformOrigin(0.5f, 0f)
                                     ) +
                                     fadeOut(targetAlpha = 0.3f)
-                        }
-                    ) {
+                        },
+
+                        ) {
+                        var windowInsetsController =
+                            WindowCompat.getInsetsController(window, window.decorView)
 
                         composable<MainApp> {
-                            var windowInsetsController =
-                                WindowCompat.getInsetsController(window, window.decorView)
-
                             with(windowInsetsController) {
                                 show(WindowInsetsCompat.Type.systemBars())
                             }
 
                             GleanScaffold(
-                                modifier = Modifier,
                                 glimpses = previewGlimpses,
                                 onClickGlimpse = { glimpse ->
                                     navController.navigate(
-                                        route = Glimpse(
-                                            glimpse.author,
-                                            glimpse.duration,
-                                            glimpse.thumbnail,
-                                            glimpse.contentDescription,
-                                            glimpse.time,
-                                            glimpse.video,
-                                            glimpse.secondsUntilExpiration,
-                                            glimpse.hearts
-                                        )
+                                        route = glimpse
                                     )
-                                }, onClickSettings = {
+                                },
+                                onClickSettings = {
                                     navController.navigate(Settings)
                                 })
                         }
 
                         composable<Glimpse> { backStackEntry ->
+                            with(windowInsetsController) {
+                                hide(WindowInsetsCompat.Type.systemBars())
+                                systemBarsBehavior =
+                                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            }
+
                             val glimpse: Glimpse = backStackEntry.toRoute()
+
                             GlimpsePlayer(
-                                modifier = Modifier,
-                                window = window,
                                 glimpse = glimpse,
                             ) {
                                 navController.navigate(route = MainApp)
                             }
                         }
-
                         composable<Settings> {
-                            GleanSettings(modifier = Modifier)
+                            GleanSettings()
                         }
                     }
                 }
@@ -162,10 +157,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GleanScaffold(
-    modifier: Modifier,
     glimpses: List<Glimpse> = listOf(),
     onClickGlimpse: (Glimpse) -> Unit,
     onClickSettings: () -> Unit
@@ -175,6 +168,7 @@ fun GleanScaffold(
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
         AppDestinations.entries.size
     }
+
     NavigationSuiteScaffold(
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.primary,
@@ -249,7 +243,7 @@ private fun Color.gradient(): Brush {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@PreviewLightDark
+@Preview
 @Composable
 fun GleanTopBar(onClickSettings: () -> Unit = { }) {
     val color = MaterialTheme.colorScheme.primaryContainer
@@ -290,7 +284,7 @@ fun GleanTopBar(onClickSettings: () -> Unit = { }) {
 
 @Preview
 @Composable
-fun GleanSettings(modifier: Modifier = Modifier) {
+fun GleanSettings() {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -347,28 +341,13 @@ fun GleanSettings(modifier: Modifier = Modifier) {
     }
 }
 
-@PreviewLightDark
-@Composable
-fun PreviewScaffold() {
-    val navController = rememberNavController()
 
+@Composable
+@Preview
+fun PreviewScaffold() {
     GleanScaffold(
-        Modifier,
-        previewGlimpses,
-        onClickGlimpse = { glimpse ->
-            navController.navigate(
-                route = Glimpse(
-                    glimpse.author,
-                    glimpse.duration,
-                    glimpse.thumbnail,
-                    glimpse.contentDescription,
-                    glimpse.time,
-                    glimpse.video,
-                    glimpse.secondsUntilExpiration,
-                    glimpse.hearts
-                )
-            )
-        }, onClickSettings = {
-            navController.navigate(Settings)
-        })
+        glimpses = previewGlimpses,
+        onClickGlimpse = { },
+        onClickSettings = { },
+    )
 }
