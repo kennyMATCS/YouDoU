@@ -2,14 +2,9 @@ package cx.glean.ui.glimpse
 
 import android.content.ContentResolver
 import android.content.Context
-import android.media.Image
 import android.net.Uri
-import androidx.compose.animation.core.EaseInOutBounce
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -18,6 +13,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +26,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -57,13 +52,15 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -160,7 +157,7 @@ var previewGlimpses = listOf(
     Glimpse(
         author = R.string.preview_7_name,
         duration = R.integer.preview_7_duration,
-        thumbnail = R.drawable.preview_7,
+        thumbnail = R.drawable.preview_1,
         contentDescription = R.string.preview_7_content_description,
         time = R.string.preview_7_date,
         video = R.raw.preview_7,
@@ -321,11 +318,20 @@ fun GlimpseCard(
                 val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
-                val expirationColor = when {
-                    expirationSeconds > (60 * 60 * 8) -> Color(51, 105, 30, 255)
-                    expirationSeconds > (60 * 60 * 1) -> Color(255, 143, 0, 255)
-                    else -> Color(229, 57, 53, 255)
-                }
+                val expirationColor =
+                    if (isSystemInDarkTheme()) {
+                        when {
+                            expirationSeconds > (60 * 60 * 8) -> Color(102, 187, 106, 255)
+                            expirationSeconds > (60 * 60 * 1) -> Color(255, 171, 64, 255)
+                            else -> Color(255, 82, 82, 255)
+                        }
+                    } else {
+                        when {
+                            expirationSeconds > (60 * 60 * 8) -> Color(51, 105, 30, 255)
+                            expirationSeconds > (60 * 60 * 1) -> Color(255, 109, 0, 255)
+                            else -> Color(183, 28, 28, 255)
+                        }
+                    }
 
                 val cornerPadding = 5.dp
 
@@ -334,11 +340,23 @@ fun GlimpseCard(
                 val behindPadding = 5.dp
                 val behindColor = MaterialTheme.colorScheme.surface
 
+                val heightFactor: Float = (expirationSeconds / (60f * 60f))
+
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.medium)
+                        .drawWithContent {
+                            drawContent()
+                            if (expirationSeconds < 60 * 60) {
+                                drawRect(
+                                    color = Color(0, 0, 0, 125),
+                                    size = Size(size.width- (size.width * heightFactor), size
+                                        .height)
+                                )
+                            }
+                        }
                 )
 
                 // TODO: change when expiration data isn't hardcoded
@@ -358,30 +376,31 @@ fun GlimpseCard(
                         .padding(cornerPadding)
                 ) {
                     Text(
+                        fontWeight = FontWeight.Bold,
                         text = expirationSeconds.seconds.toComponents { hours, minutes, seconds, nanoseconds ->
                             StringBuilder().apply {
-                                if (hours > 0) {
+                                if (hours > 1) {
                                     append(
                                         String.format(
                                             Locale.US,
-                                            "%2d:", hours
+                                            "%2d hours", hours
+                                        )
+                                    )
+                                } else if (hours == 1L) {
+                                    append(
+                                        String.format(
+                                            Locale.US,
+                                            "%2d hour", hours
+                                        )
+                                    )
+                                } else {
+                                    append(
+                                        String.format(
+                                            Locale.US,
+                                            "%02d:%02d", minutes, seconds
                                         )
                                     )
                                 }
-
-                                append(
-                                    String.format(
-                                        Locale.US,
-                                        "%02d:", minutes
-                                    )
-                                )
-
-                                append(
-                                    String.format(
-                                        Locale.US,
-                                        "%02d", seconds
-                                    )
-                                )
                             }.toString()
                         },
                         style = textStyle,
@@ -470,7 +489,7 @@ fun ShimmerAnimation(color: Color): Brush {
 
     val shimmer = listOf(
         color.copy(alpha = 1f),
-        color.copy(alpha = 0.7f),
+        color.copy(alpha = 0.65f),
         color.copy(alpha = 1f)
     )
 
@@ -555,7 +574,7 @@ fun Int.getUri(context: Context): Uri {
 @Preview
 @Composable
 fun PreviewGlimpseCard() {
-    var glimpse = previewGlimpses[6]
+    var glimpse = previewGlimpses[0]
 
     GlimpseCard(
         modifier = Modifier,
@@ -565,7 +584,7 @@ fun PreviewGlimpseCard() {
     )
 }
 
-@Preview()
+@Preview
 @Composable
 fun PreviewGlimpseGrid() {
     GlimpseGrid(

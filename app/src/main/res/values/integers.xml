@@ -13,7 +13,7 @@
     <integer name="preview_11_duration">419</integer>
     <integer name="preview_12_duration">562</integer>
 
-    <integer name="preview_1_seconds_until_expiration">5</integer>
+    <integer name="preview_1_seconds_until_expiration">1234</integer>
     <integer name="preview_2_seconds_until_expiration">3000</integer>
     <integer name="preview_3_seconds_until_expiration">8000</integer>
     <integer name="preview_4_seconds_until_expiration">60000</integer>
