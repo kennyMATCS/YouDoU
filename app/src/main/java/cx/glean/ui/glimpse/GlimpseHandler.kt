@@ -3,6 +3,7 @@ package cx.glean.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.view.WindowInsetsController
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -19,8 +20,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -64,6 +68,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import cx.glean.R
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -247,11 +253,12 @@ fun GlimpseGrid(
             DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
         },
         modifier = modifier
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.navigationBars),
         contentPadding = with(contentPadding) {
             PaddingValues(
                 top = calculateTopPadding() + pad,
-                bottom = calculateBottomPadding() + pad,
+                bottom = pad,
                 start = calculateLeftPadding(LayoutDirection.Ltr) + pad,
                 end = calculateRightPadding(LayoutDirection.Rtl) + pad
             )
@@ -303,6 +310,7 @@ fun GlimpseCard(
                 false
             },
         shadowElevation = 5.dp,
+        tonalElevation = 5.dp,
         shape = MaterialTheme.shapes.large,
     ) {
         Box {
@@ -352,8 +360,10 @@ fun GlimpseCard(
                             if (expirationSeconds < 60 * 60) {
                                 drawRect(
                                     color = Color(0, 0, 0, 125),
-                                    size = Size(size.width- (size.width * heightFactor), size
-                                        .height)
+                                    size = Size(
+                                        size.width - (size.width * heightFactor), size
+                                            .height
+                                    )
                                 )
                             }
                         }
@@ -444,9 +454,11 @@ fun GlimpseCard(
                             0 -> {
                                 icon = ImageVector.vectorResource(
                                     R.drawable
-                                        .outline_favorite)
+                                        .outline_favorite
+                                )
                                 tint = MaterialTheme.colorScheme.onSurface
                             }
+
                             else -> {
                                 icon = Icons.Filled.Favorite
                                 tint = Color(0xFFEA3323)
@@ -455,8 +467,10 @@ fun GlimpseCard(
 
                         Icon(
                             imageVector = icon,
-                            contentDescription = stringResource (R.string
-                                .heart_content_description),
+                            contentDescription = stringResource(
+                                R.string
+                                    .heart_content_description
+                            ),
                             tint = tint
                         )
 
@@ -487,11 +501,12 @@ fun GlimpseCard(
 fun ShimmerAnimation(color: Color): Brush {
     val transition = rememberInfiniteTransition()
 
-    val shimmer = listOf(
-        color.copy(alpha = 1f),
-        color.copy(alpha = 0.65f),
-        color.copy(alpha = 1f)
-    )
+    val shimmer =
+        listOf(
+            color.copy(alpha = 1f),
+            color.copy(alpha = 0.55f),
+            color.copy(alpha = 1f))
+
 
     val translateAnimation by transition.animateFloat(
         initialValue = 0f,

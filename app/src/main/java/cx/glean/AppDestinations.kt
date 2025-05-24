@@ -8,11 +8,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 // TODO: better content description
 enum class AppDestinations(
-    @StringRes val label: Int,
-    val icon: ImageVector,
-    @StringRes val contentDescription: Int,
     val pageNumber: Int
 ) {
-    RECORD(R.string.destination_record, Icons.Filled.AddCircle, contentDescription = R.string.destination_record, 0),
-    VIEW(R.string.destination_view, Icons.Filled.Star, contentDescription = R.string.destination_view, 1),
+    RECORD(0),
+    VIEW(1),
 }

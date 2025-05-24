@@ -1,9 +1,12 @@
 package cx.glean
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -75,6 +80,9 @@ object Settings
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        var canUseCamera = grant(this, Manifest.permission.CAMERA)
+        var canUseCameraAudio = grant(this, Manifest.permission.RECORD_AUDIO)
 
         enableEdgeToEdge()
         setContent {
@@ -128,7 +136,10 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onClickSettings = {
                                     navController.navigate(Settings)
-                                })
+                                },
+                                canUseCamera = canUseCamera,
+                                canUseCameraAudio = canUseCameraAudio
+                            )
                         }
 
                         composable<Glimpse> { backStackEntry ->
@@ -160,68 +171,43 @@ class MainActivity : ComponentActivity() {
 fun GleanScaffold(
     glimpses: List<Glimpse> = listOf(),
     onClickGlimpse: (Glimpse) -> Unit,
-    onClickSettings: () -> Unit
+    onClickSettings: () -> Unit,
+    canUseCamera: Boolean,
+    canUseCameraAudio: Boolean
 ) {
     var start = AppDestinations.VIEW
-    var currentDestination by rememberSaveable { mutableStateOf(start) }
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
         AppDestinations.entries.size
     }
 
-    NavigationSuiteScaffold(
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.primary,
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = stringResource(it.contentDescription)
-                        )
-                    },
-                    label = {
-                        Text(stringResource(it.label))
-                    },
-                    selected = (it == currentDestination),
-                    onClick = {
-                        currentDestination = it
-                        pagerState.requestScrollToPage(currentDestination.pageNumber)
-                    }
-                )
-            }
+    Scaffold(
+        topBar = {
+            GleanTopBar(onClickSettings)
         }
-    ) {
-        Scaffold(
-            topBar = {
-                GleanTopBar(onClickSettings)
-            }
-        ) { innerPadding ->
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-            ) { page ->
-                when (page) {
-                    AppDestinations.RECORD.pageNumber -> {
-                        GlimpseCamera(
-                            modifier = Modifier,
-                            contentPadding = innerPadding
-                        )
-                    }
-
-                    AppDestinations.VIEW.pageNumber -> {
-                        GlimpseGrid(
-                            modifier = Modifier,
-                            glimpses = glimpses.toMutableList(),
-                            contentPadding = innerPadding,
-                            onClickGlimpse = onClickGlimpse
-                        )
-                    }
+    ) { innerPadding ->
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+        ) { page ->
+            when (page) {
+                AppDestinations.RECORD.pageNumber -> {
+                    GlimpseCamera(
+                        modifier = Modifier,
+                        contentPadding = innerPadding,
+                        canUseCamera = canUseCamera,
+                        canUseCameraAudio = canUseCameraAudio
+                    )
                 }
 
-                // pretty hardcoded, but this should be okay
-                currentDestination = AppDestinations.entries[pagerState.currentPage]
+                AppDestinations.VIEW.pageNumber -> {
+                    GlimpseGrid(
+                        modifier = Modifier,
+                        glimpses = glimpses.toMutableList(),
+                        contentPadding = innerPadding,
+                        onClickGlimpse = onClickGlimpse
+                    )
+                }
             }
         }
     }
@@ -239,6 +225,31 @@ private fun Color.gradient(): Brush {
         ),
         startY = 0f,
     )
+}
+
+private fun grant(activity: MainActivity, permission: String): Boolean {
+    var grant = false
+
+    val cameraPermissionRequest =
+        activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                grant = true
+            }
+        }
+
+    when (PackageManager.PERMISSION_GRANTED) {
+        ContextCompat.checkSelfPermission(
+            activity, permission
+        ) -> {
+            grant = true
+        }
+
+        else -> {
+            cameraPermissionRequest.launch(permission)
+        }
+    }
+
+    return grant
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -348,5 +359,7 @@ fun PreviewScaffold() {
         glimpses = previewGlimpses,
         onClickGlimpse = { },
         onClickSettings = { },
+        canUseCamera = true,
+        canUseCameraAudio = true,
     )
 }
