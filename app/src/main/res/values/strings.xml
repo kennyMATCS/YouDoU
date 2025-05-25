@@ -67,4 +67,6 @@
     <string name="exo_play_pause_content_description">Play-pause button</string>
 
     <string name="heart_content_description">Heart to favorite glimpses</string>
+    <string name="camera_button_content_description">Record button</string>
+    <string name="flip_camera_content_description">Flip camera</string>
 </resources>
