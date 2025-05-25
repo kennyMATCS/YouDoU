@@ -1,0 +1,96 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="24dp"
+            android:height="24dp"
+            android:tint="?attr/colorControlNormal"
+            android:viewportWidth="960"
+            android:viewportHeight="960">
+
+            <group android:name="pathRedInnerGroup"
+                android:pivotX="480"
+                android:pivotY="480">
+                <!-- Centered rounded square path -->
+                <path
+                    android:name="centerSquare"
+                    android:fillColor="#E53935"
+                    android:pathData="M352.55,318.55
+                        h255.9
+                        a40,40 0 0 1 40,40
+                        v255.9
+                        a40,40 0 0 1 -40,40
+                        h-255.9
+                        a40,40 0 0 1 -40,-40
+                        v-255.9
+                        a40,40 0 0 1 40,-40
+                        Z" />
+            </group>
+
+            <path
+                android:name="pathWhite"
+                android:fillColor="#FFFFFF"
+                android:pathData="M480.13,840
+                        Q405.46,840 339.72,811.66
+                        Q273.99,783.32 225.36,734.74
+                        Q176.73,686.16 148.37,620.48
+                        Q120,554.81 120,480.13
+                        Q120,405.46 148.34,339.72
+                        Q176.68,273.99 225.26,225.36
+                        Q273.84,176.73 339.52,148.37
+                        Q405.19,120 479.87,120
+                        Q554.54,120 620.28,148.34
+                        Q686.01,176.68 734.64,225.26
+                        Q783.27,273.84 811.63,339.52
+                        Q840,405.19 840,479.87
+                        Q840,554.54 811.66,620.28
+                        Q783.32,686.01 734.74,734.64
+                        Q686.16,783.27 620.48,811.63
+                        Q554.81,840 480.13,840Z
+
+                        M480,800
+                        Q614,800 707,707
+                        Q800,614 800,480
+                        Q800,346 707,253
+                        Q614,160 480,160
+                        Q346,160 253,253
+                        Q160,346 160,480
+                        Q160,614 253,707
+                        Q346,800 480,800Z
+
+                        M480,480
+                        Q480,480 480,480
+                        Q480,480 480,480
+                        Q480,480 480,480
+                        Q480,480 480,480
+                        Q480,480 480,480
+                        Q480,480 480,480
+                        Q480,480 480,480" />
+        </vector>
+    </aapt:attr>
+
+    <target android:name="pathRedInnerGroup">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="900"
+                    android:propertyName="rotation"
+                    android:valueFrom="0"
+                    android:valueTo="360"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                <objectAnimator
+                    android:duration="600"
+                    android:propertyName="scaleX"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                <objectAnimator
+                    android:duration="600"
+                    android:propertyName="scaleY"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

@@ -8,6 +8,9 @@ import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,11 +27,9 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -76,9 +77,13 @@ fun GlimpseCamera(
         ) {
             AndroidView(factory = { previewView }, modifier = modifier.fillMaxSize())
 
+            val recordImage =
+                AnimatedImageVector.animatedVectorResource(R.drawable.anim_flip_camera)
+            val rotated = remember { mutableStateOf(false) }
+
             IconButton(
                 onClick = {
-                    flipCamera(lensFacing)
+                    flipCamera(lensFacing, rotated)
                 },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -86,7 +91,7 @@ fun GlimpseCamera(
                     .padding(16.dp)
             ) {
                 Image(
-                    painter = painterResource(R.drawable.flip_camera),
+                    painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
                     contentDescription = stringResource(R.string.flip_camera_content_description),
                     modifier = Modifier
                         .fillMaxSize()
@@ -94,9 +99,10 @@ fun GlimpseCamera(
             }
 
             val interactionSource = remember { MutableInteractionSource() }
+            val atEnd = remember { mutableStateOf(false) }
             IconButton(
                 onClick = {
-                    record(recording)
+                    record(recording, atEnd)
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -106,10 +112,12 @@ fun GlimpseCamera(
                         indication = null
                     ) { },
             ) {
+                val recordImage = AnimatedImageVector.animatedVectorResource(
+                    R.drawable
+                        .anim_camera_to_record
+                )
                 Image(
-                    painter = if (!recording.value) painterResource(R.drawable.camera_button) else painterResource(
-                        R.drawable.camera_recording
-                    ),
+                    painter = rememberAnimatedVectorPainter(recordImage, atEnd.value),
                     contentDescription = stringResource(R.string.camera_button_content_description),
                     modifier = Modifier
                         .fillMaxSize()
@@ -122,21 +130,23 @@ fun GlimpseCamera(
     }
 }
 
-private fun record(recording: MutableState<Boolean>) {
+private fun record(recording: MutableState<Boolean>, atEnd: MutableState<Boolean>) {
     if (recording.value) {
 
     } else {
 
     }
     recording.value = !recording.value
+    atEnd.value = !atEnd.value
 }
 
-private fun flipCamera(lensFacing: MutableIntState) {
+private fun flipCamera(lensFacing: MutableIntState, rotated: MutableState<Boolean>) {
     if (lensFacing.intValue == LENS_FACING_FRONT) {
         lensFacing.intValue = LENS_FACING_BACK
     } else {
         lensFacing.intValue = LENS_FACING_FRONT
     }
+    rotated.value = !rotated.value
 }
 
 private suspend fun Context.getCameraProvider(): ProcessCameraProvider =

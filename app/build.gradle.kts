@@ -59,6 +59,8 @@ dependencies {
     // If you want to additionally use the CameraX Extensions library
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
+    implementation(libs.androidx.animation.graphics)
+
     val tilesVersion = "2.10.0"
     //noinspection UseTomlInstead
     implementation("com.github.alorma.compose-settings:ui-tiles:$tilesVersion")
