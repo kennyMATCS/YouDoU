@@ -1,6 +1,8 @@
 package cx.glean
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,6 +31,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +57,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -112,22 +118,16 @@ class MainActivity : ComponentActivity() {
 
                         enterTransition = {
                             slideInVertically(
-                                initialOffsetY = { -40 }
-                            ) + expandVertically(expandFrom = Alignment.CenterVertically) +
-                                    scaleIn(
-                                        transformOrigin = TransformOrigin(0.5f, 0f)
-                                    ) +
-                                    fadeIn(initialAlpha = 0.3f)
+                                initialOffsetY = { -40 }) + expandVertically(expandFrom = Alignment.CenterVertically) + scaleIn(
+                                transformOrigin = TransformOrigin(0.5f, 0f)
+                            ) + fadeIn(initialAlpha = 0.3f)
                         },
 
                         exitTransition = {
                             slideOutVertically(
-                                targetOffsetY = { -40 }
-                            ) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) +
-                                    scaleOut(
-                                        transformOrigin = TransformOrigin(0.5f, 0f)
-                                    ) +
-                                    fadeOut(targetAlpha = 0.3f)
+                                targetOffsetY = { -40 }) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) + scaleOut(
+                                transformOrigin = TransformOrigin(0.5f, 0f)
+                            ) + fadeOut(targetAlpha = 0.3f)
                         },
 
                         ) {
@@ -206,12 +206,9 @@ fun GleanScaffold(
     Scaffold(
         topBar = {
             GleanTopBar(onClickSettings, secondsUntilCanRecordAgain, recording)
-        }
-    ) { innerPadding ->
+        }) { innerPadding ->
         HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
+            state = pagerState, modifier = Modifier.fillMaxSize()
         ) { page ->
             when (page) {
                 AppDestinations.RECORD.pageNumber -> {
@@ -303,13 +300,33 @@ fun GleanTopBar(
                 Text(
                     text = secondsUntilCanRecordAgain.value.formatTimeSeconds(),
                     modifier = Modifier
+                        .padding(horizontal = 10.dp)
                         .alpha(
-                            if (secondsUntilCanRecordAgain.value > 0 && !recording.value) 1f else
-                                0f
+                            if (secondsUntilCanRecordAgain.value > 0 && !recording.value) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (!isSystemInDarkTheme()) ExpiringSoon else DarkExpiringSoon,
                 )
+
+                // TODO: add link to app in final version
+                val context = LocalContext.current
+                val text = stringResource(R.string.share_message).replace(
+                    "%app_name%", stringResource(
+                        R.string.app_name
+                    )
+                )
+
+                Icon(
+                    Icons.Filled.Share,
+                    contentDescription = "Share app",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp)
+                        .clickable {
+                            share(
+                                text = text, context = context
+                            )
+                        })
 
                 Icon(
                     Icons.Filled.Settings,
@@ -319,14 +336,12 @@ fun GleanTopBar(
                         .padding(horizontal = 10.dp)
                         .clickable {
                             onClickSettings()
-                        }
-                )
+                        })
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent
             ),
-            modifier = Modifier
-                .background(color.gradient()),
+            modifier = Modifier.background(color.gradient()),
         )
     }
 
@@ -336,12 +351,10 @@ fun GleanTopBar(
 @Composable
 fun GleanSettings() {
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .padding(innerPadding)
+            modifier = Modifier.padding(innerPadding)
         ) {
             var switchState by remember { mutableStateOf(false) }
             var checkBoxState by remember { mutableStateOf(false) }
@@ -350,39 +363,29 @@ fun GleanSettings() {
             Column {
                 SettingsGroup {
                     SettingsSwitch(
-                        state = switchState,
-                        title = { Text("Test Switch") }
-                    ) {
+                        state = switchState, title = { Text("Test Switch") }) {
                         switchState = !switchState
                     }
 
                     SettingsCheckbox(
-                        state = checkBoxState,
-                        title = { Text("Test Checkbox") }
-                    ) {
+                        state = checkBoxState, title = { Text("Test Checkbox") }) {
                         checkBoxState = !checkBoxState
                     }
                 }
 
                 SettingsGroup {
                     SettingsRadioButton(
-                        state = radioState == 0,
-                        title = { Text("Option 1") }
-                    ) {
+                        state = radioState == 0, title = { Text("Option 1") }) {
                         radioState = 0
                     }
 
                     SettingsRadioButton(
-                        state = radioState == 1,
-                        title = { Text("Option 2") }
-                    ) {
+                        state = radioState == 1, title = { Text("Option 2") }) {
                         radioState = 1
                     }
 
                     SettingsRadioButton(
-                        state = radioState == 2,
-                        title = { Text("Option 3") }
-                    ) {
+                        state = radioState == 2, title = { Text("Option 3") }) {
                         radioState = 2
                     }
                 }
@@ -410,8 +413,7 @@ fun PreviewGleanTopBar() {
     GleanTopBar(
         onClickSettings = { },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) },
-        recording = remember { mutableStateOf(false) }
-    )
+        recording = remember { mutableStateOf(false) })
 }
 
 private fun Long.formatTimeSeconds(): String {
@@ -420,25 +422,32 @@ private fun Long.formatTimeSeconds(): String {
             if (hours > 0) {
                 append(
                     String.format(
-                        Locale.US,
-                        "%2d:", hours
+                        Locale.US, "%2d:", hours
                     )
                 )
             }
 
             append(
                 String.format(
-                    Locale.US,
-                    "%02d:", minutes
+                    Locale.US, "%02d:", minutes
                 )
             )
 
             append(
                 String.format(
-                    Locale.US,
-                    "%02d", seconds
+                    Locale.US, "%02d", seconds
                 )
             )
         }.toString()
     }
+}
+
+private fun share(text: String, context: Context) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        putExtra(Intent.EXTRA_TEXT, text)
+        type = "text/plan"
+    }
+    val shareIntent = Intent.createChooser(sendIntent, null)
+
+    context.startActivity(shareIntent)
 }

@@ -47,7 +47,6 @@ import kotlin.coroutines.suspendCoroutine
 
 // TODO: fix asking for permissions
 // TODO: share button for top bar
-// TODO: glimpse record timeout for top bar
 
 @Composable
 fun GlimpseCamera(

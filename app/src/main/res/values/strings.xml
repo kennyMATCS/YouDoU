@@ -71,4 +71,5 @@
     <string name="flip_camera_content_description">Flip camera</string>
     <string name="recording_timeout_title">Recording timeout</string>
     <string name="recording_timeout_message">Glimpses can only be recorded once every 24 hours. Are you sure you would like to continue?</string>
+    <string name="share_message">Check out %app_name%, a social media app where you can share your unfiltered self. Viewership is equitably shared on %app_name%, which means a view for one is a view for all!</string>
 </resources>
