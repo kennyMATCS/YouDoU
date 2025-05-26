@@ -62,12 +62,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import cx.glean.R
+import cx.glean.ui.theme.DarkExpiringFar
+import cx.glean.ui.theme.DarkExpiringMedium
+import cx.glean.ui.theme.DarkExpiringSoon
+import cx.glean.ui.theme.ExpiringFar
+import cx.glean.ui.theme.ExpiringMedium
+import cx.glean.ui.theme.ExpiringSoon
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -324,17 +331,17 @@ fun GlimpseCard(
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
                 val expirationColor =
-                    if (isSystemInDarkTheme()) {
+                    if (!isSystemInDarkTheme()) {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> Color(102, 187, 106, 255)
-                            expirationSeconds > (60 * 60 * 1) -> Color(255, 171, 64, 255)
-                            else -> Color(255, 82, 82, 255)
+                            expirationSeconds > (60 * 60 * 8) -> ExpiringFar
+                            expirationSeconds > (60 * 60 * 1) -> ExpiringMedium
+                            else -> ExpiringSoon
                         }
                     } else {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> Color(51, 105, 30, 255)
-                            expirationSeconds > (60 * 60 * 1) -> Color(255, 109, 0, 255)
-                            else -> Color(183, 28, 28, 255)
+                            expirationSeconds > (60 * 60 * 8) -> DarkExpiringFar
+                            expirationSeconds > (60 * 60 * 1) -> DarkExpiringMedium
+                            else -> DarkExpiringSoon
                         }
                     }
 
@@ -384,32 +391,7 @@ fun GlimpseCard(
                 ) {
                     Text(
                         fontWeight = FontWeight.Bold,
-                        text = expirationSeconds.seconds.toComponents { hours, minutes, seconds, nanoseconds ->
-                            StringBuilder().apply {
-                                if (hours > 1) {
-                                    append(
-                                        String.format(
-                                            Locale.US,
-                                            "%2d hours", hours
-                                        )
-                                    )
-                                } else if (hours == 1L) {
-                                    append(
-                                        String.format(
-                                            Locale.US,
-                                            "%2d hour", hours
-                                        )
-                                    )
-                                } else {
-                                    append(
-                                        String.format(
-                                            Locale.US,
-                                            "%02d:%02d", minutes, seconds
-                                        )
-                                    )
-                                }
-                            }.toString()
-                        },
+                        text = expirationSeconds.formatTimeSeconds(),
                         style = textStyle,
                         color = expirationColor,
                         modifier = modifier
@@ -502,7 +484,8 @@ fun ShimmerAnimation(color: Color): Brush {
         listOf(
             color.copy(alpha = 1f),
             color.copy(alpha = 0.55f),
-            color.copy(alpha = 1f))
+            color.copy(alpha = 1f)
+        )
 
 
     val translateAnimation by transition.animateFloat(
@@ -569,6 +552,35 @@ enum class DetailPaneBreakpoint {
     COMPACT,
     MEDIUM,
     EXPANDED
+}
+
+private fun Long.formatTimeSeconds(): String {
+    return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
+        StringBuilder().apply {
+            if (hours > 1) {
+                append(
+                    String.format(
+                        Locale.US,
+                        "%2d hours", hours
+                    )
+                )
+            } else if (hours == 1L) {
+                append(
+                    String.format(
+                        Locale.US,
+                        "%2d hour", hours
+                    )
+                )
+            } else {
+                append(
+                    String.format(
+                        Locale.US,
+                        "%02d:%02d", minutes, seconds
+                    )
+                )
+            }
+        }.toString()
+    }
 }
 
 fun Int.getUri(context: Context): Uri {

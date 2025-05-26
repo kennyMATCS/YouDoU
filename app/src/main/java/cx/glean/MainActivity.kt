@@ -17,10 +17,14 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -28,22 +32,28 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
@@ -65,7 +75,13 @@ import cx.glean.ui.glimpse.player.GlimpsePlayer
 import cx.glean.ui.theme.GleanTheme
 import cx.glean.ui.glimpse.previewGlimpses
 import cx.glean.ui.glimpse.record.GlimpseCamera
+import cx.glean.ui.theme.DarkExpiringSoon
+import cx.glean.ui.theme.ExpiringSoon
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 object MainApp
@@ -176,9 +192,20 @@ fun GleanScaffold(
         AppDestinations.entries.size
     }
 
+    var recording = remember { mutableStateOf(false) }
+    var secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) }
+    val atEnd = remember { mutableStateOf(false) }
+
+    LaunchedEffect(secondsUntilCanRecordAgain.longValue) {
+        if (secondsUntilCanRecordAgain.longValue > 0) {
+            delay(1000L)
+            secondsUntilCanRecordAgain.longValue -= 1
+        }
+    }
+
     Scaffold(
         topBar = {
-            GleanTopBar(onClickSettings)
+            GleanTopBar(onClickSettings, secondsUntilCanRecordAgain, recording)
         }
     ) { innerPadding ->
         HorizontalPager(
@@ -192,7 +219,10 @@ fun GleanScaffold(
                         modifier = Modifier,
                         contentPadding = innerPadding,
                         canUseCamera = canUseCamera,
-                        canUseCameraAudio = canUseCameraAudio
+                        canUseCameraAudio = canUseCameraAudio,
+                        secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
+                        recording = recording,
+                        atEnd = atEnd
                     )
                 }
 
@@ -249,9 +279,12 @@ private fun grant(activity: MainActivity, permission: String): Boolean {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
 @Composable
-fun GleanTopBar(onClickSettings: () -> Unit = { }) {
+fun GleanTopBar(
+    onClickSettings: () -> Unit = { },
+    secondsUntilCanRecordAgain: MutableState<Long>,
+    recording: MutableState<Boolean>
+) {
     val color = MaterialTheme.colorScheme.primaryContainer
 
     Surface(
@@ -262,10 +295,22 @@ fun GleanTopBar(onClickSettings: () -> Unit = { }) {
                 Text(
                     text = "glean",
                     color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.headlineLarge
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier
                 )
             },
             actions = {
+                Text(
+                    text = secondsUntilCanRecordAgain.value.formatTimeSeconds(),
+                    modifier = Modifier
+                        .alpha(
+                            if (secondsUntilCanRecordAgain.value > 0 && !recording.value) 1f else
+                                0f
+                        ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (!isSystemInDarkTheme()) ExpiringSoon else DarkExpiringSoon,
+                )
+
                 Icon(
                     Icons.Filled.Settings,
                     contentDescription = "Settings",
@@ -282,7 +327,6 @@ fun GleanTopBar(onClickSettings: () -> Unit = { }) {
             ),
             modifier = Modifier
                 .background(color.gradient()),
-            expandedHeight = 55.dp
         )
     }
 
@@ -349,7 +393,7 @@ fun GleanSettings() {
 
 
 @Composable
-@PreviewScreenSizes
+@Preview
 fun PreviewScaffold() {
     GleanScaffold(
         glimpses = previewGlimpses,
@@ -358,4 +402,43 @@ fun PreviewScaffold() {
         canUseCamera = true,
         canUseCameraAudio = true,
     )
+}
+
+@Preview
+@Composable
+fun PreviewGleanTopBar() {
+    GleanTopBar(
+        onClickSettings = { },
+        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) },
+        recording = remember { mutableStateOf(false) }
+    )
+}
+
+private fun Long.formatTimeSeconds(): String {
+    return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
+        StringBuilder().apply {
+            if (hours > 0) {
+                append(
+                    String.format(
+                        Locale.US,
+                        "%2d:", hours
+                    )
+                )
+            }
+
+            append(
+                String.format(
+                    Locale.US,
+                    "%02d:", minutes
+                )
+            )
+
+            append(
+                String.format(
+                    Locale.US,
+                    "%02d", seconds
+                )
+            )
+        }.toString()
+    }
 }

@@ -48,18 +48,25 @@ dependencies {
     // CameraX core library using the camera2 implementatio
     val camerax_version = "1.5.0-beta01"
     // The following line is optional, as the core library is included indirectly by camera-camera2
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-core:${camerax_version}")
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-camera2:${camerax_version}")
     // If you want to additionally use the CameraX Lifecycle library
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-lifecycle:${camerax_version}")
     // If you want to additionally use the CameraX VideoCapture library
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-video:${camerax_version}")
     // If you want to additionally use the CameraX View class
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-view:${camerax_version}")
     // If you want to additionally use the CameraX Extensions library
+    //noinspection UseTomlInstead
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
     implementation(libs.androidx.animation.graphics)
+    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
 
     val tilesVersion = "2.10.0"
     //noinspection UseTomlInstead

@@ -9,3 +9,11 @@ val Pink = Color(0xFFDD688A)
 val LightHoney = Color(0xFFFFDB6D)
 val LightPowderBlue = Color(0xFF9FB7FF)
 val LightPink = Color(0xFFEFB8C8)
+
+val ExpiringFar = Color(102, 187, 106, 255)
+val ExpiringMedium = Color(255, 171, 64, 255)
+val ExpiringSoon = Color(255, 82, 82, 255)
+
+val DarkExpiringFar = Color(51, 105, 30, 255)
+val DarkExpiringMedium = Color(255, 109, 0, 255)
+val DarkExpiringSoon = Color(183, 28, 28, 255)

@@ -69,4 +69,6 @@
     <string name="heart_content_description">Heart to favorite glimpses</string>
     <string name="camera_button_content_description">Record button</string>
     <string name="flip_camera_content_description">Flip camera</string>
+    <string name="recording_timeout_title">Recording timeout</string>
+    <string name="recording_timeout_message">Glimpses can only be recorded once every 24 hours. Are you sure you would like to continue?</string>
 </resources>
