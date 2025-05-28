@@ -1,6 +1,8 @@
 package cx.glean.ui.glimpse.record
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import cx.glean.R
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraSelector.LENS_FACING_BACK
@@ -12,6 +14,7 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -24,6 +27,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,29 +45,49 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import cx.glean.MainActivity
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-
-// TODO: fix asking for permissions
-// TODO: share button for top bar
 
 @Composable
 fun GlimpseCamera(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    canUseCamera: Boolean,
-    canUseCameraAudio: Boolean,
+    canUseCamera: MutableState<Boolean>,
+    canUseCameraAudio: MutableState<Boolean>,
     secondsUntilCanRecordAgain: MutableState<Long>,
     recording: MutableState<Boolean>,
     atEnd: MutableState<Boolean>,
+    activity: MainActivity?,
 ) {
-    var lensFacing = remember { mutableIntStateOf(LENS_FACING_FRONT) }
-
-
-    val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    activity?.let {
+        var requestList = mutableListOf<String>()
+
+        checkPermission(
+            context = context,
+            state = canUseCamera,
+            activity = activity,
+            requestList = requestList,
+            permission = Manifest.permission.CAMERA,
+        )
+
+        checkPermission(
+            context = context,
+            state = canUseCameraAudio,
+            activity = activity,
+            requestList = requestList,
+            permission = Manifest.permission.RECORD_AUDIO,
+        )
+
+        activity.requestPermissionLauncher.launch(requestList.toTypedArray())
+    }
+
+    var lensFacing = remember { mutableIntStateOf(LENS_FACING_FRONT) }
+    val lifecycleOwner = LocalLifecycleOwner.current
     val preview = Preview.Builder().build()
     val previewView = remember {
         PreviewView(context)
@@ -71,17 +96,45 @@ fun GlimpseCamera(
     }
 
     var openConfirmDialog = remember { mutableStateOf(false) }
+    var openTimeoutDialog = remember { mutableStateOf(false) }
+
+    when {
+        openTimeoutDialog.value -> {
+            AlertDialog(
+                icon = {
+                    Icon(Icons.Default.Warning, contentDescription = stringResource(R.string
+                        .recording_timeout_content_description))
+                },
+                title = {
+                    Text(stringResource(R.string.recording_timeout_notify_title))
+                },
+                text = {
+                    Text(stringResource(R.string.recording_timeout_notify_message))
+                },
+                onDismissRequest = { },
+                confirmButton = { },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            openTimeoutDialog.value = false
+                        }
+                    ) {
+                        Text("Dismiss")
+                    }
+                }
+            )
+        }
+    }
 
     when {
         openConfirmDialog.value -> {
             ConfirmDialog(onConfirm = {
                 record(recording, atEnd)
-                secondsUntilCanRecordAgain.value = 60 * 60 * 24
             }, openConfirmDialog)
         }
     }
 
-    if (canUseCamera && canUseCameraAudio) {
+    if (canUseCamera.value && canUseCameraAudio.value) {
         LaunchedEffect(lensFacing.intValue) {
             val cameraXSelector = CameraSelector.Builder()
                 .requireLensFacing(lensFacing.intValue)
@@ -125,9 +178,14 @@ fun GlimpseCamera(
             IconButton(
                 onClick = {
                     if (!recording.value) {
-                        openConfirmDialog.value = true
+                        if (secondsUntilCanRecordAgain.value > 0) {
+                            openTimeoutDialog.value = true
+                        } else {
+                            openConfirmDialog.value = true
+                        }
                     } else {
                         record(recording, atEnd)
+                        secondsUntilCanRecordAgain.value = 60 * 60 * 24
                     }
                 },
                 modifier = Modifier
@@ -152,7 +210,20 @@ fun GlimpseCamera(
         }
 
     } else {
-        // TODO: implement
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.camera_and_audio_required),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .align(Alignment.Center)
+            )
+        }
     }
 }
 
@@ -163,13 +234,14 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         icon = {
-            Icon(Icons.Default.Warning, contentDescription = "Recording alert")
+            Icon(Icons.Default.Warning, contentDescription = stringResource(R.
+                string.recording_timeout_content_description))
         },
         title = {
-            Text(stringResource(R.string.recording_timeout_title))
+            Text(stringResource(R.string.recording_timeout_confirm_title))
         },
         text = {
-            Text(stringResource(R.string.recording_timeout_message))
+            Text(stringResource(R.string.recording_timeout_confirm_message))
         },
         onDismissRequest = {
 
@@ -200,13 +272,25 @@ fun ConfirmDialog(
 @Composable
 fun PreviewGlimpseCamera() {
     GlimpseCamera(
-        modifier = Modifier,
-        contentPadding = PaddingValues(),
-        canUseCamera = true,
-        canUseCameraAudio = true,
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
         recording = remember { mutableStateOf(false) },
-        atEnd = remember { mutableStateOf(false) }
+        atEnd = remember { mutableStateOf(false) },
+        activity = null,
+        canUseCamera = remember { mutableStateOf(true) },
+        canUseCameraAudio = remember { mutableStateOf(true) }
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+fun PreviewGlimpseCameraNoPermissions() {
+    GlimpseCamera(
+        secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
+        recording = remember { mutableStateOf(false) },
+        atEnd = remember { mutableStateOf(false) },
+        activity = null,
+        canUseCamera = remember { mutableStateOf(false) },
+        canUseCameraAudio = remember { mutableStateOf(false) }
     )
 }
 
@@ -237,3 +321,25 @@ private suspend fun Context.getCameraProvider(): ProcessCameraProvider =
             }, ContextCompat.getMainExecutor(this))
         }
     }
+
+private fun checkPermission(
+    context: Context, state: MutableState<Boolean>,
+    activity:
+    MainActivity,
+    requestList: MutableList<String>, permission: String,
+) {
+    if (ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        state.value = true
+    } else {
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                activity, permission
+            )
+        ) {
+            requestList.add(permission)
+        }
+    }
+}

@@ -8,7 +8,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,21 +23,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,11 +55,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -83,7 +76,6 @@ import cx.glean.ui.glimpse.previewGlimpses
 import cx.glean.ui.glimpse.record.GlimpseCamera
 import cx.glean.ui.theme.DarkExpiringSoon
 import cx.glean.ui.theme.ExpiringSoon
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -96,11 +88,35 @@ object MainApp
 object Settings
 
 class MainActivity : ComponentActivity() {
+    lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
+    var canUseCameraCallback = mutableStateOf(false)
+    var canUseCameraAudioCallback = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        var canUseCamera = grant(this, Manifest.permission.CAMERA)
-        var canUseCameraAudio = grant(this, Manifest.permission.RECORD_AUDIO)
+
+        // Register the permissions callback, which handles the user's response to the
+        // system permissions dialog. Save the return value, an instance of
+        // ActivityResultLauncher. You can use either a val, as shown in this snippet,
+        // or a lateinit var in your onAttach() or onCreate() method.
+        requestPermissionLauncher =
+            registerForActivityResult(RequestMultiplePermissions()
+            ) { granted ->
+                granted.forEach { a ->
+                    when(a.key) {
+                        Manifest.permission.CAMERA -> {
+                            if (a.value) canUseCameraCallback.value = true
+                        }
+
+                        Manifest.permission.RECORD_AUDIO -> {
+                            if (a.value) canUseCameraAudioCallback.value = true
+                        }
+                    }
+                }
+            }
+
+        val activity = this
 
         enableEdgeToEdge()
         setContent {
@@ -140,6 +156,7 @@ class MainActivity : ComponentActivity() {
                             }
 
                             GleanScaffold(
+                                activity = activity,
                                 glimpses = previewGlimpses,
                                 onClickGlimpse = { glimpse ->
                                     navController.navigate(
@@ -149,8 +166,8 @@ class MainActivity : ComponentActivity() {
                                 onClickSettings = {
                                     navController.navigate(Settings)
                                 },
-                                canUseCamera = canUseCamera,
-                                canUseCameraAudio = canUseCameraAudio
+                                canUseCameraCallback = canUseCameraCallback,
+                                canUseCameraAudioCallback = canUseCameraAudioCallback
                             )
                         }
 
@@ -177,6 +194,27 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int,
+//        permissions: Array<out String?>,
+//        grantResults: IntArray,
+//        deviceId: Int
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
+//
+//        grantResults.forEachIndexed { i, grant ->
+//            when (grant) {
+//                PackageManager.PERMISSION_GRANTED -> {
+//
+//                }
+//
+//                PackageManager.PERMISSION_DENIED -> {
+//
+//                }
+//            }
+//        }
+//    }
 }
 
 @Composable
@@ -184,8 +222,9 @@ fun GleanScaffold(
     glimpses: List<Glimpse> = listOf(),
     onClickGlimpse: (Glimpse) -> Unit,
     onClickSettings: () -> Unit,
-    canUseCamera: Boolean,
-    canUseCameraAudio: Boolean
+    activity: MainActivity?,
+    canUseCameraCallback: MutableState<Boolean>,
+    canUseCameraAudioCallback: MutableState<Boolean>
 ) {
     var start = AppDestinations.VIEW
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
@@ -215,11 +254,12 @@ fun GleanScaffold(
                     GlimpseCamera(
                         modifier = Modifier,
                         contentPadding = innerPadding,
-                        canUseCamera = canUseCamera,
-                        canUseCameraAudio = canUseCameraAudio,
                         secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
                         recording = recording,
-                        atEnd = atEnd
+                        atEnd = atEnd,
+                        activity = activity,
+                        canUseCamera = canUseCameraCallback,
+                        canUseCameraAudio = canUseCameraAudioCallback
                     )
                 }
 
@@ -250,31 +290,6 @@ private fun Color.gradient(): Brush {
     )
 }
 
-private fun grant(activity: MainActivity, permission: String): Boolean {
-    var grant = false
-
-    val permissionRequest =
-        activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                grant = true
-            }
-        }
-
-    when (PackageManager.PERMISSION_GRANTED) {
-        ContextCompat.checkSelfPermission(
-            activity, permission
-        ) -> {
-            grant = true
-        }
-
-        else -> {
-            permissionRequest.launch(permission)
-        }
-    }
-
-    return grant
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GleanTopBar(
@@ -302,7 +317,7 @@ fun GleanTopBar(
                     modifier = Modifier
                         .padding(horizontal = 10.dp)
                         .alpha(
-                            if (secondsUntilCanRecordAgain.value > 0 && !recording.value) 1f else 0f
+                            if (secondsUntilCanRecordAgain.value > 0) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (!isSystemInDarkTheme()) ExpiringSoon else DarkExpiringSoon,
@@ -402,8 +417,9 @@ fun PreviewScaffold() {
         glimpses = previewGlimpses,
         onClickGlimpse = { },
         onClickSettings = { },
-        canUseCamera = true,
-        canUseCameraAudio = true,
+        activity = null,
+        canUseCameraCallback = remember { mutableStateOf(true) },
+        canUseCameraAudioCallback = remember { mutableStateOf(true) }
     )
 }
 

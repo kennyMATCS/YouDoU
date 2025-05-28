@@ -66,7 +66,7 @@ dependencies {
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
     implementation(libs.androidx.animation.graphics)
-    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
+    implementation(libs.androidx.compose.bom)
 
     val tilesVersion = "2.10.0"
     //noinspection UseTomlInstead
