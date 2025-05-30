@@ -96,6 +96,7 @@ class MainActivity : ComponentActivity() {
     //   thumbnail picker for uploading glimpses.
     //   users should not be able to have drafts
     //   they must upload their glimpse then and there
+    //   option for uploading next
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -240,15 +241,14 @@ fun GleanScaffold(
             when (page) {
                 AppDestinations.RECORD.pageNumber -> {
                     GlimpseCamera(
-                        modifier = Modifier,
                         contentPadding = innerPadding,
+                        canUseCamera = canUseCameraCallback,
+                        canUseCameraAudio = canUseCameraAudioCallback,
                         secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
                         isRecording = recording,
                         atEnd = atEnd,
+                        uri = uri,
                         activity = activity,
-                        canUseCamera = canUseCameraCallback,
-                        canUseCameraAudio = canUseCameraAudioCallback,
-                        uri = uri
                     )
                 }
 

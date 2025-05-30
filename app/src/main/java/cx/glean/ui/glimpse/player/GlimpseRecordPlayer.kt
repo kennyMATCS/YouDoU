@@ -3,6 +3,7 @@ package cx.glean.ui.glimpse.player
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.view.LayoutInflater
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -11,21 +12,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import cx.glean.R
-import cx.glean.ui.glimpse.Glimpse
-import cx.glean.ui.glimpse.getUri
 
+@OptIn(UnstableApi::class)
 @SuppressLint("InflateParams")
 @Composable
 fun GlimpseRecordPlayer(
     uri: Uri,
 ) {
     val context = LocalContext.current
-    var exoPlayer = ExoPlayer.Builder(context)
+
+    val exoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
         .build()
 
@@ -45,8 +45,10 @@ fun GlimpseRecordPlayer(
 
     AndroidView(
         factory = { context ->
-            (LayoutInflater.from(context).inflate(R.layout.glimpse_record_player_view,
-                null, false) as PlayerView).apply {
+            (LayoutInflater.from(context).inflate(
+                R.layout.glimpse_record_player_view,
+                null, false
+            ) as PlayerView).apply {
                 player = exoPlayer
             }
         },

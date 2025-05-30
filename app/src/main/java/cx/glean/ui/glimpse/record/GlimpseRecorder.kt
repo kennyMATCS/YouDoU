@@ -37,6 +37,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,12 +63,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.exoplayer.ExoPlayer
 import cx.glean.MainActivity
 import cx.glean.R
+import cx.glean.ui.glimpse.getUri
 import cx.glean.ui.glimpse.player.GlimpseRecordPlayer
 import java.io.File
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.util.Locale
 import java.util.concurrent.Executor
 import kotlin.coroutines.resume
@@ -181,7 +183,25 @@ fun GlimpseCamera(
                 .padding(contentPadding)
                 .fillMaxSize()
         ) {
-            GlimpseRecordPlayer(uri.value!!)
+            GlimpseRecordPlayer(
+                uri = uri.value!!,
+            )
+            Button(
+                onClick = {
+                    // TODO: upload logic
+                    uri.value = null
+                },
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+                modifier = Modifier
+                    .padding(6.dp)
+                    .align(Alignment.BottomEnd)
+            ) {
+                Text("Upload")
+            }
         }
     } else {
         if (canUseCamera.value && canUseCameraAudio.value) {
@@ -335,13 +355,13 @@ fun ConfirmDialog(
 @Composable
 fun PreviewGlimpseCamera() {
     GlimpseCamera(
+        canUseCamera = remember { mutableStateOf(true) },
+        canUseCameraAudio = remember { mutableStateOf(true) },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
         isRecording = remember { mutableStateOf(false) },
         atEnd = remember { mutableStateOf(false) },
+        uri = remember { mutableStateOf(null) },
         activity = null,
-        canUseCamera = remember { mutableStateOf(true) },
-        canUseCameraAudio = remember { mutableStateOf(true) },
-        uri = remember { mutableStateOf(null) }
     )
 }
 
@@ -349,13 +369,29 @@ fun PreviewGlimpseCamera() {
 @Composable
 fun PreviewGlimpseCameraNoPermissions() {
     GlimpseCamera(
+        canUseCamera = remember { mutableStateOf(false) },
+        canUseCameraAudio = remember { mutableStateOf(false) },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
         isRecording = remember { mutableStateOf(false) },
         atEnd = remember { mutableStateOf(false) },
+        uri = remember { mutableStateOf(null) },
         activity = null,
-        canUseCamera = remember { mutableStateOf(false) },
-        canUseCameraAudio = remember { mutableStateOf(false) },
-        uri = remember { mutableStateOf(null) }
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+fun PreviewGlimpseRecording() {
+    var context = LocalContext.current
+
+    GlimpseCamera(
+        secondsUntilCanRecordAgain = remember { mutableLongStateOf(60 * 60 * 24) },
+        isRecording = remember { mutableStateOf(false) },
+        atEnd = remember { mutableStateOf(false) },
+        activity = null,
+        canUseCamera = remember { mutableStateOf(true) },
+        canUseCameraAudio = remember { mutableStateOf(true) },
+        uri = remember { mutableStateOf(R.raw.preview_5.getUri(context)) }
     )
 }
 
@@ -385,12 +421,6 @@ private fun startRecording(
         ) { event ->
             if (event is VideoRecordEvent.Finalize) {
                 uri.value = event.outputResults.outputUri
-//                if (u != Uri.EMPTY) {
-//                    uri.value = URLEncoder.encode(
-//                        u.toString(),
-//                        StandardCharsets.UTF_8.toString()
-//                    )
-//                }
             }
         }
     }
