@@ -3,7 +3,7 @@ package cx.glean
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -70,7 +70,7 @@ import com.alorma.compose.settings.ui.SettingsRadioButton
 import com.alorma.compose.settings.ui.SettingsSwitch
 import cx.glean.ui.glimpse.Glimpse
 import cx.glean.ui.glimpse.GlimpseGrid
-import cx.glean.ui.glimpse.player.GlimpsePlayer
+import cx.glean.ui.glimpse.player.GlimpseWatchPlayer
 import cx.glean.ui.theme.GleanTheme
 import cx.glean.ui.glimpse.previewGlimpses
 import cx.glean.ui.glimpse.record.GlimpseCamera
@@ -92,19 +92,24 @@ class MainActivity : ComponentActivity() {
     var canUseCameraCallback = mutableStateOf(false)
     var canUseCameraAudioCallback = mutableStateOf(false)
 
+    // TODO: review recorded video
+    //   thumbnail picker for uploading glimpses.
+    //   users should not be able to have drafts
+    //   they must upload their glimpse then and there
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         // Register the permissions callback, which handles the user's response to the
         // system permissions dialog. Save the return value, an instance of
         // ActivityResultLauncher. You can use either a val, as shown in this snippet,
         // or a lateinit var in your onAttach() or onCreate() method.
         requestPermissionLauncher =
-            registerForActivityResult(RequestMultiplePermissions()
+            registerForActivityResult(
+                RequestMultiplePermissions()
             ) { granted ->
                 granted.forEach { a ->
-                    when(a.key) {
+                    when (a.key) {
                         Manifest.permission.CAMERA -> {
                             if (a.value) canUseCameraCallback.value = true
                         }
@@ -116,6 +121,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+        val uri: MutableState<Uri?> = mutableStateOf(null)
         val activity = this
 
         enableEdgeToEdge()
@@ -167,7 +173,8 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Settings)
                                 },
                                 canUseCameraCallback = canUseCameraCallback,
-                                canUseCameraAudioCallback = canUseCameraAudioCallback
+                                canUseCameraAudioCallback = canUseCameraAudioCallback,
+                                uri = uri
                             )
                         }
 
@@ -180,7 +187,7 @@ class MainActivity : ComponentActivity() {
 
                             val glimpse: Glimpse = backStackEntry.toRoute()
 
-                            GlimpsePlayer(
+                            GlimpseWatchPlayer(
                                 glimpse = glimpse,
                             ) {
                                 navController.navigate(route = MainApp)
@@ -194,27 +201,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String?>,
-//        grantResults: IntArray,
-//        deviceId: Int
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
-//
-//        grantResults.forEachIndexed { i, grant ->
-//            when (grant) {
-//                PackageManager.PERMISSION_GRANTED -> {
-//
-//                }
-//
-//                PackageManager.PERMISSION_DENIED -> {
-//
-//                }
-//            }
-//        }
-//    }
 }
 
 @Composable
@@ -224,7 +210,8 @@ fun GleanScaffold(
     onClickSettings: () -> Unit,
     activity: MainActivity?,
     canUseCameraCallback: MutableState<Boolean>,
-    canUseCameraAudioCallback: MutableState<Boolean>
+    canUseCameraAudioCallback: MutableState<Boolean>,
+    uri: MutableState<Uri?>
 ) {
     var start = AppDestinations.VIEW
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
@@ -244,10 +231,11 @@ fun GleanScaffold(
 
     Scaffold(
         topBar = {
-            GleanTopBar(onClickSettings, secondsUntilCanRecordAgain, recording)
+            GleanTopBar(onClickSettings, secondsUntilCanRecordAgain)
         }) { innerPadding ->
         HorizontalPager(
-            state = pagerState, modifier = Modifier.fillMaxSize()
+            state = pagerState, modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = !recording.value
         ) { page ->
             when (page) {
                 AppDestinations.RECORD.pageNumber -> {
@@ -255,11 +243,12 @@ fun GleanScaffold(
                         modifier = Modifier,
                         contentPadding = innerPadding,
                         secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
-                        recording = recording,
+                        isRecording = recording,
                         atEnd = atEnd,
                         activity = activity,
                         canUseCamera = canUseCameraCallback,
-                        canUseCameraAudio = canUseCameraAudioCallback
+                        canUseCameraAudio = canUseCameraAudioCallback,
+                        uri = uri
                     )
                 }
 
@@ -295,7 +284,6 @@ private fun Color.gradient(): Brush {
 fun GleanTopBar(
     onClickSettings: () -> Unit = { },
     secondsUntilCanRecordAgain: MutableState<Long>,
-    recording: MutableState<Boolean>
 ) {
     val color = MaterialTheme.colorScheme.primaryContainer
 
@@ -419,7 +407,8 @@ fun PreviewScaffold() {
         onClickSettings = { },
         activity = null,
         canUseCameraCallback = remember { mutableStateOf(true) },
-        canUseCameraAudioCallback = remember { mutableStateOf(true) }
+        canUseCameraAudioCallback = remember { mutableStateOf(true) },
+        uri = remember { mutableStateOf(null) }
     )
 }
 
@@ -428,8 +417,7 @@ fun PreviewScaffold() {
 fun PreviewGleanTopBar() {
     GleanTopBar(
         onClickSettings = { },
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) },
-        recording = remember { mutableStateOf(false) })
+        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) })
 }
 
 private fun Long.formatTimeSeconds(): String {

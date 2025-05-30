@@ -1,14 +1,26 @@
 package cx.glean.ui.glimpse.record
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import cx.glean.R
+import android.icu.text.SimpleDateFormat
+import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraSelector.LENS_FACING_BACK
 import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -28,7 +40,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,11 +58,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.util.Consumer
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import cx.glean.MainActivity
+import cx.glean.R
+import cx.glean.ui.glimpse.player.GlimpseRecordPlayer
+import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.util.Locale
+import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
+@OptIn(ExperimentalCamera2Interop::class)
 @Composable
 fun GlimpseCamera(
     modifier: Modifier = Modifier,
@@ -59,11 +80,29 @@ fun GlimpseCamera(
     canUseCamera: MutableState<Boolean>,
     canUseCameraAudio: MutableState<Boolean>,
     secondsUntilCanRecordAgain: MutableState<Long>,
-    recording: MutableState<Boolean>,
+    isRecording: MutableState<Boolean>,
     atEnd: MutableState<Boolean>,
+    uri: MutableState<Uri?>,
     activity: MainActivity?,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var recording: MutableState<Recording?> = remember { mutableStateOf(null) }
+    val previewView = PreviewView(context)
+    var lensFacing = remember { mutableIntStateOf(LENS_FACING_FRONT) }
+    val cameraSelector = remember {
+        mutableStateOf(
+            CameraSelector.Builder()
+                .requireLensFacing(lensFacing.intValue)
+                .build()
+        )
+    }
+
+    val videoCapture: MutableState<VideoCapture<Recorder>?> = remember { mutableStateOf(null) }
+    val cameraProvider: MutableState<ProcessCameraProvider?> = remember { mutableStateOf(null) }
+    val preview: MutableState<Preview?> = remember { mutableStateOf(null) }
+
     activity?.let {
         var requestList = mutableListOf<String>()
 
@@ -86,15 +125,6 @@ fun GlimpseCamera(
         activity.requestPermissionLauncher.launch(requestList.toTypedArray())
     }
 
-    var lensFacing = remember { mutableIntStateOf(LENS_FACING_FRONT) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val preview = Preview.Builder().build()
-    val previewView = remember {
-        PreviewView(context)
-    }.apply {
-        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-    }
-
     var openConfirmDialog = remember { mutableStateOf(false) }
     var openTimeoutDialog = remember { mutableStateOf(false) }
 
@@ -102,8 +132,12 @@ fun GlimpseCamera(
         openTimeoutDialog.value -> {
             AlertDialog(
                 icon = {
-                    Icon(Icons.Default.Warning, contentDescription = stringResource(R.string
-                        .recording_timeout_content_description))
+                    Icon(
+                        Icons.Default.Warning, contentDescription = stringResource(
+                            R.string
+                                .recording_timeout_content_description
+                        )
+                    )
                 },
                 title = {
                     Text(stringResource(R.string.recording_timeout_notify_title))
@@ -129,100 +163,126 @@ fun GlimpseCamera(
     when {
         openConfirmDialog.value -> {
             ConfirmDialog(onConfirm = {
-                record(recording, atEnd)
+                startRecording(
+                    isRecording, atEnd,
+                    videoCapture = videoCapture,
+                    recording = recording,
+                    context = context,
+                    uri = uri
+                )
             }, openConfirmDialog)
         }
     }
 
-    if (canUseCamera.value && canUseCameraAudio.value) {
-        LaunchedEffect(lensFacing.intValue) {
-            val cameraXSelector = CameraSelector.Builder()
-                .requireLensFacing(lensFacing.intValue)
-                .build()
 
-            val cameraProvider = context.getCameraProvider()
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(lifecycleOwner, cameraXSelector, preview)
-            preview.surfaceProvider = previewView.surfaceProvider
-        }
-
+    if (uri.value != null) {
         Box(
             modifier = modifier
                 .padding(contentPadding)
                 .fillMaxSize()
         ) {
-            AndroidView(factory = { previewView }, modifier = modifier.fillMaxSize())
+            GlimpseRecordPlayer(uri.value!!)
+        }
+    } else {
+        if (canUseCamera.value && canUseCameraAudio.value) {
+            LaunchedEffect(Unit) {
+                videoCapture.value = context.createVideoCaptureUseCase(
+                    lifecycleOwner = lifecycleOwner,
+                    cameraSelector = cameraSelector.value,
+                    previewView = previewView,
+                    cameraProvider = cameraProvider,
+                    preview = preview
+                )
+            }
 
-            val recordImage =
-                AnimatedImageVector.animatedVectorResource(R.drawable.anim_flip_camera)
-            val rotated = remember { mutableStateOf(false) }
+            Box(
+                modifier = modifier
+                    .padding(contentPadding)
+                    .fillMaxSize()
+            ) {
+                AndroidView(factory = { previewView }, modifier = modifier.fillMaxSize())
 
-            IconButton(
-                onClick = {
-                    flipCamera(lensFacing, rotated)
-                },
+                val recordImage =
+                    AnimatedImageVector.animatedVectorResource(R.drawable.anim_flip_camera)
+                val rotated = remember { mutableStateOf(false) }
+
+                IconButton(
+                    onClick = {
+                        flipCamera(
+                            lensFacing = lensFacing,
+                            rotated = rotated,
+                            cameraSelector = cameraSelector,
+                            recording = recording,
+                            context = context,
+                            lifecycleOwner = lifecycleOwner,
+                            videoCapture = videoCapture,
+                            preview = preview,
+                            cameraProvider = cameraProvider
+                        )
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(70.dp)
+                        .padding(16.dp)
+                ) {
+                    Image(
+                        painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
+                        contentDescription = stringResource(R.string.flip_camera_content_description),
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
+
+                val interactionSource = remember { MutableInteractionSource() }
+                IconButton(
+                    onClick = {
+                        if (!isRecording.value) {
+                            if (secondsUntilCanRecordAgain.value > 0) {
+                                openTimeoutDialog.value = true
+                            } else {
+                                openConfirmDialog.value = true
+                            }
+                        } else {
+                            stopRecording(isRecording, recording, atEnd)
+                            secondsUntilCanRecordAgain.value = 60 * 60 * 24
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .size(120.dp)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) { },
+                ) {
+                    val recordImage = AnimatedImageVector.animatedVectorResource(
+                        R.drawable
+                            .anim_camera_to_record
+                    )
+                    Image(
+                        painter = rememberAnimatedVectorPainter(recordImage, atEnd.value),
+                        contentDescription = stringResource(R.string.camera_button_content_description),
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
+            }
+
+        } else {
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(70.dp)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
-                Image(
-                    painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
-                    contentDescription = stringResource(R.string.flip_camera_content_description),
+                Text(
+                    text = stringResource(R.string.camera_and_audio_required),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .align(Alignment.Center)
                 )
             }
-
-            val interactionSource = remember { MutableInteractionSource() }
-            IconButton(
-                onClick = {
-                    if (!recording.value) {
-                        if (secondsUntilCanRecordAgain.value > 0) {
-                            openTimeoutDialog.value = true
-                        } else {
-                            openConfirmDialog.value = true
-                        }
-                    } else {
-                        record(recording, atEnd)
-                        secondsUntilCanRecordAgain.value = 60 * 60 * 24
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .size(120.dp)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) { },
-            ) {
-                val recordImage = AnimatedImageVector.animatedVectorResource(
-                    R.drawable
-                        .anim_camera_to_record
-                )
-                Image(
-                    painter = rememberAnimatedVectorPainter(recordImage, atEnd.value),
-                    contentDescription = stringResource(R.string.camera_button_content_description),
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
-        }
-
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.camera_and_audio_required),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .align(Alignment.Center)
-            )
         }
     }
 }
@@ -234,8 +294,11 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         icon = {
-            Icon(Icons.Default.Warning, contentDescription = stringResource(R.
-                string.recording_timeout_content_description))
+            Icon(
+                Icons.Default.Warning, contentDescription = stringResource(
+                    R.string.recording_timeout_content_description
+                )
+            )
         },
         title = {
             Text(stringResource(R.string.recording_timeout_confirm_title))
@@ -273,11 +336,12 @@ fun ConfirmDialog(
 fun PreviewGlimpseCamera() {
     GlimpseCamera(
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
-        recording = remember { mutableStateOf(false) },
+        isRecording = remember { mutableStateOf(false) },
         atEnd = remember { mutableStateOf(false) },
         activity = null,
         canUseCamera = remember { mutableStateOf(true) },
-        canUseCameraAudio = remember { mutableStateOf(true) }
+        canUseCameraAudio = remember { mutableStateOf(true) },
+        uri = remember { mutableStateOf(null) }
     )
 }
 
@@ -286,41 +350,98 @@ fun PreviewGlimpseCamera() {
 fun PreviewGlimpseCameraNoPermissions() {
     GlimpseCamera(
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
-        recording = remember { mutableStateOf(false) },
+        isRecording = remember { mutableStateOf(false) },
         atEnd = remember { mutableStateOf(false) },
         activity = null,
         canUseCamera = remember { mutableStateOf(false) },
-        canUseCameraAudio = remember { mutableStateOf(false) }
+        canUseCameraAudio = remember { mutableStateOf(false) },
+        uri = remember { mutableStateOf(null) }
     )
 }
 
-private fun record(recording: MutableState<Boolean>, atEnd: MutableState<Boolean>) {
-    if (recording.value) {
+private fun startRecording(
+    isRecording: MutableState<Boolean>,
+    atEnd: MutableState<Boolean>,
+    videoCapture: MutableState<VideoCapture<Recorder>?>,
+    recording: MutableState<Recording?>,
+    uri: MutableState<Uri?>,
+    context: Context
+) {
+    toggleRecording(isRecording, atEnd)
 
-    } else {
+    videoCapture.value.let {
+        val mediaDir = context.externalCacheDirs.firstOrNull()?.let {
+            File(it, context.getString(R.string.app_name)).apply { mkdirs() }
+        }
 
+        recording.value = startRecordingVideo(
+            context = context,
+            filenameFormat = "yyyy-MM-dd-HH-mm-ss-SSS",
+            videoCapture = videoCapture,
+            outputDirectory = if (mediaDir != null && mediaDir.exists()) mediaDir else context
+                .filesDir,
+            executor = context.mainExecutor,
+            audioEnabled = true,
+        ) { event ->
+            if (event is VideoRecordEvent.Finalize) {
+                uri.value = event.outputResults.outputUri
+//                if (u != Uri.EMPTY) {
+//                    uri.value = URLEncoder.encode(
+//                        u.toString(),
+//                        StandardCharsets.UTF_8.toString()
+//                    )
+//                }
+            }
+        }
     }
+}
+
+private fun stopRecording(
+    isRecording: MutableState<Boolean>,
+    recording: MutableState<Recording?>,
+    atEnd: MutableState<Boolean>,
+) {
+    toggleRecording(isRecording, atEnd)
+    recording.value?.stop()
+}
+
+private fun toggleRecording(
+    recording: MutableState<Boolean>,
+    atEnd: MutableState<Boolean>
+) {
     recording.value = !recording.value
     atEnd.value = !atEnd.value
 }
 
-private fun flipCamera(lensFacing: MutableIntState, rotated: MutableState<Boolean>) {
+private fun flipCamera(
+    lensFacing: MutableIntState,
+    rotated: MutableState<Boolean>,
+    cameraSelector: MutableState<CameraSelector>,
+    recording: MutableState<Recording?>,
+    context: Context,
+    lifecycleOwner: LifecycleOwner,
+    videoCapture: MutableState<VideoCapture<Recorder>?>,
+    preview: MutableState<Preview?>,
+    cameraProvider: MutableState<ProcessCameraProvider?>
+) {
     if (lensFacing.intValue == LENS_FACING_FRONT) {
         lensFacing.intValue = LENS_FACING_BACK
     } else {
         lensFacing.intValue = LENS_FACING_FRONT
     }
     rotated.value = !rotated.value
-}
 
-private suspend fun Context.getCameraProvider(): ProcessCameraProvider =
-    suspendCoroutine { continuation ->
-        ProcessCameraProvider.getInstance(this).also { cameraProvider ->
-            cameraProvider.addListener({
-                continuation.resume(cameraProvider.get())
-            }, ContextCompat.getMainExecutor(this))
-        }
+    cameraSelector.value = CameraSelector.Builder()
+        .requireLensFacing(lensFacing.intValue)
+        .build()
+
+    recording.let {
+        context.bindCamera(
+            lifecycleOwner, cameraSelector.value, preview, videoCapture.value,
+            cameraProvider
+        )
     }
+}
 
 private fun checkPermission(
     context: Context, state: MutableState<Boolean>,
@@ -342,4 +463,86 @@ private fun checkPermission(
             requestList.add(permission)
         }
     }
+}
+
+suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspendCoroutine { continuation ->
+    ProcessCameraProvider.getInstance(this).also { future ->
+        future.addListener(
+            {
+                continuation.resume(future.get())
+            },
+            mainExecutor
+        )
+    }
+}
+
+suspend fun Context.createVideoCaptureUseCase(
+    lifecycleOwner: LifecycleOwner,
+    cameraSelector: CameraSelector,
+    previewView: PreviewView,
+    preview: MutableState<Preview?>,
+    cameraProvider: MutableState<ProcessCameraProvider?>
+): VideoCapture<Recorder> {
+    preview.value = Preview.Builder().build().apply {
+        surfaceProvider = previewView.surfaceProvider
+    }
+
+    val qualitySelector = QualitySelector.from(
+        Quality.FHD,
+        FallbackStrategy.lowerQualityOrHigherThan(Quality.FHD)
+    )
+
+    val recorder = Recorder.Builder()
+        .setExecutor(mainExecutor)
+        .setQualitySelector(qualitySelector)
+        .build()
+
+    val videoCapture = VideoCapture.withOutput(recorder)
+
+    cameraProvider.value = getCameraProvider()
+    bindCamera(lifecycleOwner, cameraSelector, preview, videoCapture, cameraProvider)
+
+    return videoCapture
+}
+
+fun Context.bindCamera(
+    lifecycleOwner: LifecycleOwner,
+    cameraSelector: CameraSelector,
+    preview: MutableState<Preview?>,
+    videoCapture: VideoCapture<Recorder>?,
+    cameraProvider: MutableState<ProcessCameraProvider?>
+) {
+    cameraProvider.value?.unbindAll()
+    cameraProvider.value?.bindToLifecycle(
+        lifecycleOwner,
+        cameraSelector,
+        preview.value,
+        videoCapture
+    )
+}
+
+@SuppressLint("MissingPermission")
+fun startRecordingVideo(
+    context: Context,
+    filenameFormat: String,
+    videoCapture: MutableState<VideoCapture<Recorder>?>,
+    outputDirectory: File,
+    executor: Executor,
+    audioEnabled: Boolean,
+    consumer: Consumer<VideoRecordEvent>
+): Recording? {
+    val videoFile = File(
+        outputDirectory,
+        SimpleDateFormat(filenameFormat, Locale.US).format(System.currentTimeMillis()) + ".mp4"
+    )
+
+    val outputOptions = FileOutputOptions.Builder(videoFile).build()
+
+    val output = videoCapture.value?.output
+        ?.prepareRecording(context, outputOptions)
+        ?.asPersistentRecording()
+        ?.apply { if (audioEnabled) withAudioEnabled() }
+        ?.start(executor, consumer)
+
+    return output
 }

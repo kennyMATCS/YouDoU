@@ -7,6 +7,6 @@
     android:keepScreenOn="true"
     app:auto_show="false"
     app:show_timeout="2200"
-    app:controller_layout_id="@layout/glimpse_player_control_view">
+    app:controller_layout_id="@layout/glimpse_watch_player_control_view">
 
 </androidx.media3.ui.PlayerView>
