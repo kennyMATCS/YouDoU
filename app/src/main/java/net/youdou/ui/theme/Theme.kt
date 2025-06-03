@@ -1,4 +1,4 @@
-package cx.glean.ui.theme
+package net.youdou.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -17,9 +18,13 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightHoney,
-    secondary = LightPowderBlue,
-    tertiary = LightPink
+//    primary = LightHoney,
+//    secondary = LightPowderBlue,
+//    tertiary = LightPink
+
+    primary = Color(0xFFFFFB92),
+    secondary = Color(0xFFCCE0FF),
+    tertiary = Color(0xFFD6F9B8)
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -33,7 +38,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun GleanTheme(
+fun YouDoUTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,

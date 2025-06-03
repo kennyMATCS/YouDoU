@@ -1,4 +1,4 @@
-package cx.glean
+package net.youdou
 
 // TODO: better content description
 enum class AppDestinations(

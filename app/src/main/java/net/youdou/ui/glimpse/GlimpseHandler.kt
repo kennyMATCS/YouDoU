@@ -1,4 +1,4 @@
-package cx.glean.ui.glimpse
+package net.youdou.ui.glimpse
 
 import android.content.ContentResolver
 import android.content.Context
@@ -67,13 +67,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
-import cx.glean.R
-import cx.glean.ui.theme.DarkExpiringFar
-import cx.glean.ui.theme.DarkExpiringMedium
-import cx.glean.ui.theme.DarkExpiringSoon
-import cx.glean.ui.theme.ExpiringFar
-import cx.glean.ui.theme.ExpiringMedium
-import cx.glean.ui.theme.ExpiringSoon
+import net.youdou.R
+import net.youdou.ui.theme.DarkExpiringFar
+import net.youdou.ui.theme.DarkExpiringMedium
+import net.youdou.ui.theme.DarkExpiringSoon
+import net.youdou.ui.theme.ExpiringFar
+import net.youdou.ui.theme.ExpiringMedium
+import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -317,7 +317,7 @@ fun GlimpseCard(
         shape = MaterialTheme.shapes.large,
     ) {
         Box {
-            GleanDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset)
+            YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset)
         }
 
         Column(
@@ -509,7 +509,7 @@ fun ShimmerAnimation(color: Color): Brush {
 }
 
 @Composable
-fun GleanDropDown(
+fun YouDoUDropDown(
     dropDownItems: List<DropDownItem>,
     isContextMenuVisible: MutableState<Boolean>,
     contextMenuOffset: MutableState<Offset>

@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    namespace = "cx.glean"
+    namespace = "net.youdou"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "cx.glean"
-        minSdk = 28
+        applicationId = "cx.youdou"
+        minSdk = 21
         targetSdk = 35
         versionCode = 1
         versionName = "0.1"
@@ -21,8 +21,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            // isShrinkResources = true
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -66,7 +66,13 @@ dependencies {
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
     implementation(libs.androidx.animation.graphics)
-    implementation(libs.androidx.compose.bom)
+    implementation(platform(libs.androidx.compose.bom))
+
+    implementation(libs.androidx.credentials)
+
+    // optional - needed for credentials support from play services, for devices running
+    // Android 13 and below.
+    implementation(libs.androidx.credentials.play.services.auth)
 
     val tilesVersion = "2.10.0"
     //noinspection UseTomlInstead

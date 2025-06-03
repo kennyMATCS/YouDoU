@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Glean"
+rootProject.name = "YouDoU"
 include(":app")
  

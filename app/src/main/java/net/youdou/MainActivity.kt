@@ -1,4 +1,4 @@
-package cx.glean
+package net.youdou
 
 import android.Manifest
 import android.content.Context
@@ -68,14 +68,14 @@ import com.alorma.compose.settings.ui.SettingsCheckbox
 import com.alorma.compose.settings.ui.SettingsGroup
 import com.alorma.compose.settings.ui.SettingsRadioButton
 import com.alorma.compose.settings.ui.SettingsSwitch
-import cx.glean.ui.glimpse.Glimpse
-import cx.glean.ui.glimpse.GlimpseGrid
-import cx.glean.ui.glimpse.player.GlimpseWatchPlayer
-import cx.glean.ui.theme.GleanTheme
-import cx.glean.ui.glimpse.previewGlimpses
-import cx.glean.ui.glimpse.record.GlimpseCamera
-import cx.glean.ui.theme.DarkExpiringSoon
-import cx.glean.ui.theme.ExpiringSoon
+import net.youdou.ui.glimpse.Glimpse
+import net.youdou.ui.glimpse.GlimpseGrid
+import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
+import net.youdou.ui.theme.YouDoUTheme
+import net.youdou.ui.glimpse.previewGlimpses
+import net.youdou.ui.glimpse.record.GlimpseCamera
+import net.youdou.ui.theme.DarkExpiringSoon
+import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            GleanTheme {
+            YouDoUTheme {
                 Box(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.background)
@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
                                 show(WindowInsetsCompat.Type.systemBars())
                             }
 
-                            GleanScaffold(
+                            YouDoUScaffold(
                                 activity = activity,
                                 glimpses = previewGlimpses,
                                 onClickGlimpse = { glimpse ->
@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable<Settings> {
-                            GleanSettings()
+                            YouDoUSettings()
                         }
                     }
                 }
@@ -205,7 +205,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun GleanScaffold(
+fun YouDoUScaffold(
     glimpses: List<Glimpse> = listOf(),
     onClickGlimpse: (Glimpse) -> Unit,
     onClickSettings: () -> Unit,
@@ -232,7 +232,7 @@ fun GleanScaffold(
 
     Scaffold(
         topBar = {
-            GleanTopBar(onClickSettings, secondsUntilCanRecordAgain)
+            YouDoUTopBar(onClickSettings, secondsUntilCanRecordAgain)
         }) { innerPadding ->
         HorizontalPager(
             state = pagerState, modifier = Modifier.fillMaxSize(),
@@ -281,7 +281,7 @@ private fun Color.gradient(): Brush {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GleanTopBar(
+fun YouDoUTopBar(
     onClickSettings: () -> Unit = { },
     secondsUntilCanRecordAgain: MutableState<Long>,
 ) {
@@ -293,7 +293,7 @@ fun GleanTopBar(
         TopAppBar(
             title = {
                 Text(
-                    text = "glean",
+                    text = stringResource(R.string.app_name),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier
@@ -352,7 +352,7 @@ fun GleanTopBar(
 
 @Preview
 @Composable
-fun GleanSettings() {
+fun YouDoUSettings() {
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
@@ -401,7 +401,7 @@ fun GleanSettings() {
 @Composable
 @Preview
 fun PreviewScaffold() {
-    GleanScaffold(
+    YouDoUScaffold(
         glimpses = previewGlimpses,
         onClickGlimpse = { },
         onClickSettings = { },
@@ -414,8 +414,8 @@ fun PreviewScaffold() {
 
 @Preview
 @Composable
-fun PreviewGleanTopBar() {
-    GleanTopBar(
+fun PreviewYouDoUTopBar() {
+    YouDoUTopBar(
         onClickSettings = { },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) })
 }

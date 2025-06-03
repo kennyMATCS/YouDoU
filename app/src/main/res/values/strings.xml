@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Glean</string>
+    <string name="app_name">YouDoU</string>
     <string name="destination_record">Record</string>
     <string name="destination_view">Glimpses</string>
     <string name="destination_info">Info</string>

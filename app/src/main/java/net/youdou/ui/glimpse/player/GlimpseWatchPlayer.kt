@@ -1,9 +1,7 @@
-package cx.glean.ui.glimpse.player
+package net.youdou.ui.glimpse.player
 
 import android.annotation.SuppressLint
-import android.net.Uri
 import android.view.LayoutInflater
-import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,24 +10,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
-import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import cx.glean.R
+import net.youdou.R
+import net.youdou.ui.glimpse.Glimpse
+import net.youdou.ui.glimpse.getUri
 
-@OptIn(UnstableApi::class)
 @SuppressLint("InflateParams")
 @Composable
-fun GlimpseRecordPlayer(
-    uri: Uri,
+fun GlimpseWatchPlayer(
+    glimpse: Glimpse,
+    onVideoEndOrClose: () -> Unit
 ) {
     val context = LocalContext.current
-
-    val exoPlayer = ExoPlayer.Builder(context)
+    var exoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
         .build()
 
-    var mediaItem = MediaItem.fromUri(uri)
+    exoPlayer.addListener(object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                onVideoEndOrClose()
+            }
+        }
+    })
+
+    var mediaItem = MediaItem.fromUri(glimpse.video.getUri
+        (context))
 
     LaunchedEffect(mediaItem) {
         exoPlayer.setMediaItem(mediaItem)
@@ -43,12 +51,11 @@ fun GlimpseRecordPlayer(
         }
     }
 
+    // TODO: view reuse for performance
     AndroidView(
         factory = { context ->
-            (LayoutInflater.from(context).inflate(
-                R.layout.glimpse_record_player_view,
-                null, false
-            ) as PlayerView).apply {
+            (LayoutInflater.from(context).inflate(R.layout.glimpse_watch_player_view,
+                null, false) as PlayerView).apply {
                 player = exoPlayer
             }
         },

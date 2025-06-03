@@ -1,6 +1,8 @@
 [versions]
 adaptiveNavigation = "1.2.0-alpha06"
 agp = "8.9.3"
+credentials = "1.6.0-alpha02"
+credentialsPlayServicesAuth = "1.6.0-alpha02"
 kotlin = "2.0.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -21,6 +23,8 @@ androidx-adaptive-layout = { module = "androidx.compose.material3.adaptive:adapt
 androidx-adaptive-navigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation", version.ref = "adaptiveNavigation" }
 androidx-animation-graphics = { module = "androidx.compose.animation:animation-graphics" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsPlayServicesAuth" }
 androidx-material3-adaptive-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite" }
 androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3UiCompose" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3Ui" }

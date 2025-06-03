@@ -1,4 +1,4 @@
-package cx.glean.ui.glimpse.record
+package net.youdou.ui.glimpse.record
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -63,11 +63,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.media3.exoplayer.ExoPlayer
-import cx.glean.MainActivity
-import cx.glean.R
-import cx.glean.ui.glimpse.getUri
-import cx.glean.ui.glimpse.player.GlimpseRecordPlayer
+import net.youdou.MainActivity
+import net.youdou.R
+import net.youdou.ui.glimpse.getUri
+import net.youdou.ui.glimpse.player.GlimpseRecordPlayer
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.Executor
