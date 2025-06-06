@@ -1,6 +1,5 @@
 package net.youdou
 
-// TODO: better content description
 enum class AppDestinations(
     val pageNumber: Int
 ) {

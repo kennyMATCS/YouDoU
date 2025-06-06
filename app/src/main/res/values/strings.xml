@@ -76,4 +76,11 @@
     <string name="recording_timeout_notify_message">You are currently timed out from recording a new glimpse.</string>
     <string name="camera_and_audio_required">Camera and recording audio permissions are required to create glimpses. Please allow the respective settings to create a glimpse.</string>
     <string name="recording_timeout_content_description">Timeout notification</string>
+    <string name="sign_in_text">Sign in</string>
+    <string name="sign_up_text">Sign up</string>
+    <string name="place_holder_username_sign_in_field">E-mail</string>
+    <string name="place_holder_password_field">Password</string>
+    <string name="place_holder_password_confirm_field">Confirm password</string>
+    <string name="place_holder_username_sign_up_field">E-mail</string>
+    <string name="place_holder_phone_number_field">Phone #</string>
 </resources>

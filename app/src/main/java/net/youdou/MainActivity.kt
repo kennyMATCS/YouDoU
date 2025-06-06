@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.credentials.CredentialManager
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -78,6 +79,9 @@ import net.youdou.ui.theme.DarkExpiringSoon
 import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import net.youdou.ui.account.AccountSignInPage
+import net.youdou.ui.account.AccountSignUpPage
+import net.youdou.ui.account.AccountStartPage
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
@@ -87,16 +91,19 @@ object MainApp
 @Serializable
 object Settings
 
+@Serializable
+object AccountStartPage
+
+@Serializable
+object AccountSignIn
+
+@Serializable
+object AccountSignUp
+
 class MainActivity : ComponentActivity() {
     lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     var canUseCameraCallback = mutableStateOf(false)
     var canUseCameraAudioCallback = mutableStateOf(false)
-
-    // TODO: review recorded video
-    //   thumbnail picker for uploading glimpses.
-    //   users should not be able to have drafts
-    //   they must upload their glimpse then and there
-    //   option for uploading next
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -137,7 +144,7 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = MainApp,
+                        startDestination = AccountStartPage,
 
                         enterTransition = {
                             slideInVertically(
@@ -156,6 +163,29 @@ class MainActivity : ComponentActivity() {
                         ) {
                         var windowInsetsController =
                             WindowCompat.getInsetsController(window, window.decorView)
+
+                        composable<AccountStartPage> {
+                            AccountStartPage(
+                                navigateSignIn = { navController.navigate(route = AccountSignIn) },
+                                navigateSignUp = { navController.navigate(route = AccountSignUp) }
+                            )
+                        }
+
+                        composable<AccountSignUp> {
+                            AccountSignUpPage {
+                                navController.navigate(MainApp) {
+                                    popUpTo(0) // clear backstack
+                                }
+                            }
+                        }
+
+                        composable<AccountSignIn> {
+                            AccountSignInPage {
+                                navController.navigate(MainApp) {
+                                    popUpTo(0) // clear backstack
+                                }
+                            }
+                        }
 
                         composable<MainApp> {
                             with(windowInsetsController) {
@@ -292,12 +322,7 @@ fun YouDoUTopBar(
     ) {
         TopAppBar(
             title = {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.headlineLarge,
-                    modifier = Modifier
-                )
+                YouDoUTopText()
             },
             actions = {
                 Text(
@@ -348,6 +373,16 @@ fun YouDoUTopBar(
         )
     }
 
+}
+
+@Composable
+fun YouDoUTopText(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.app_name),
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.headlineLarge,
+        modifier = modifier
+    )
 }
 
 @Preview

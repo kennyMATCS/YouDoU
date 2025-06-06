@@ -38,4 +38,9 @@
     <integer name="preview_10_hearts">0</integer>
     <integer name="preview_11_hearts">0</integer>
     <integer name="preview_12_hearts">0</integer>
+    <integer name="username_max_length">254</integer>
+    <integer name="password_max_length">20</integer>
+    <integer name="phone_max_length">10</integer>
+    <integer name="password_min_length">8</integer>
+    <integer name="phone_min_length">10</integer>
 </resources>

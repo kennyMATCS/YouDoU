@@ -65,6 +65,8 @@ dependencies {
     //noinspection UseTomlInstead
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
+    implementation(libs.androidx.material.icons.extended)
+
     implementation(libs.androidx.animation.graphics)
     implementation(platform(libs.androidx.compose.bom))
 
