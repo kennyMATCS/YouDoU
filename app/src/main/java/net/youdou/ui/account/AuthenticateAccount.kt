@@ -482,7 +482,7 @@ private fun AuthenticateTextField(
     OutlinedTextField(
         value = state.value,
         onValueChange = { value ->
-            if (value.length <= maxLength) {
+            if (value.length <= maxLength && !value.isEmpty() && value.last() != ' ') {
                 state.value = value
             }
         },

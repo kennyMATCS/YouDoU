@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.window.OnBackInvokedCallback
-import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -27,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -80,7 +79,6 @@ import net.youdou.ui.glimpse.GlimpseGrid
 import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
 import net.youdou.ui.glimpse.previewGlimpses
 import net.youdou.ui.glimpse.record.GlimpseCamera
-import net.youdou.ui.theme.DarkExpiringSoon
 import net.youdou.ui.theme.ExpiringSoon
 import net.youdou.ui.theme.YouDoUTheme
 import java.util.Locale
@@ -333,6 +331,8 @@ private fun Color.gradient(): Brush {
     )
 }
 
+// TODO: ui check topbar, settings, glimpse videos, glimpse player
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouDoUTopBar(
@@ -357,7 +357,7 @@ fun YouDoUTopBar(
                             if (secondsUntilCanRecordAgain.value > 0) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (!isSystemInDarkTheme()) ExpiringSoon else DarkExpiringSoon,
+                    color = ExpiringSoon
                 )
 
                 // TODO: add link to app in final version
@@ -368,12 +368,18 @@ fun YouDoUTopBar(
                     )
                 )
 
+                // TODO: multi-window mode
+
+                val iconPadding = 0.dp
+                val iconWidth = 60.dp
+
                 Icon(
                     Icons.Filled.Share,
                     contentDescription = "Share app",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .padding(horizontal = 10.dp)
+                        .padding(horizontal = iconPadding)
+                        .width(iconWidth)
                         .clickable {
                             share(
                                 text = text, context = context
@@ -385,7 +391,8 @@ fun YouDoUTopBar(
                     contentDescription = "Settings",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .padding(horizontal = 10.dp)
+                        .padding(horizontal = iconPadding)
+                        .width(iconWidth)
                         .clickable {
                             onClickSettings()
                         })
@@ -456,7 +463,8 @@ fun YouDoUSettings() {
     }
 }
 
-
+// TODO: maybe delete me later?
+@Suppress("VisualLintBounds")
 @Composable
 @Preview
 fun PreviewScaffold() {

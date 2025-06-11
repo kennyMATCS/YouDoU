@@ -68,11 +68,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import net.youdou.R
-import net.youdou.ui.theme.DarkExpiringFar
-import net.youdou.ui.theme.DarkExpiringMedium
-import net.youdou.ui.theme.DarkExpiringSoon
-import net.youdou.ui.theme.ExpiringFar
-import net.youdou.ui.theme.ExpiringMedium
 import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -98,10 +93,13 @@ data class DropDownItem(
     val onItemClick: () -> Unit
 )
 
+// TODO: big plus button in empty glimpse at the bottom to entice people to purchase premium
 // TODO: add functionality
+// TODO: custom color
 val dropDownItems = listOf(
     DropDownItem("Report", color = Color.Red, onItemClick = { }),
 )
+
 var previewGlimpses = listOf(
     Glimpse(
         author = R.string.preview_1_name,
@@ -225,6 +223,17 @@ var previewGlimpses = listOf(
     )
 )
 
+// TODO: force ui check before pushing code
+// TODO: fix dark mode in ui check
+// TODO: better landscape mode
+// TODO: create settings
+// TODO: adjust in-out animation. learn how to use animation manager
+// TODO: fix ui check FOR EVERYTHING
+// TODO: unit testing
+// TODO: make code look better, clean it up! more functions!
+// TODO: visit weatherspoon
+// TODO: improve dropdown popup
+
 @Composable
 fun GlimpseGrid(
     modifier: Modifier, glimpses: MutableList<Glimpse>, contentPadding: PaddingValues,
@@ -238,9 +247,8 @@ fun GlimpseGrid(
         )
     ) {
         DetailPaneBreakpoint.EXPANDED
-    } else if (windowSizeClass.isAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
-            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
+    } else if (windowSizeClass.isWidthAtLeastBreakpoint(
+            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
         )
     ) {
         DetailPaneBreakpoint.MEDIUM
@@ -249,11 +257,12 @@ fun GlimpseGrid(
     }
 
     val pad = 8.dp
+    val arrangementPadding = 2.dp
     LazyVerticalGrid(
         columns = when (detailPaneBreakpoint) {
-            DetailPaneBreakpoint.COMPACT -> GridCells.Adaptive(150.dp)
-            DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(4)
-            DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(6)
+            DetailPaneBreakpoint.COMPACT -> GridCells.Fixed(1)
+            DetailPaneBreakpoint.MEDIUM -> GridCells.Fixed(2)
+            DetailPaneBreakpoint.EXPANDED -> GridCells.Fixed(3)
         },
         modifier = modifier
             .background(MaterialTheme.colorScheme.background)
@@ -267,8 +276,8 @@ fun GlimpseGrid(
             )
         },
 
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(arrangementPadding),
+        verticalArrangement = Arrangement.spacedBy(arrangementPadding)
     ) {
         items(
             items = glimpses,
@@ -278,6 +287,7 @@ fun GlimpseGrid(
                 glimpse = it,
                 onClickGlimpse = onClickGlimpse,
                 onRemoveGlimpse = { glimpse ->
+                    // TODO: glimpses expiring
                     // glimpses.remove(glimpse)
                 }
             )
@@ -298,7 +308,7 @@ fun GlimpseCard(
     Surface(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
-            .padding(5.dp)
+            .padding(8.dp)
             .combinedClickable(
                 true,
                 onClick = {
@@ -325,34 +335,35 @@ fun GlimpseCard(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(4.dp)
         ) {
+            val cornerPadding = 8.dp
+            val textStyle = MaterialTheme.typography.bodyLarge
+            val behindShape = MaterialTheme.shapes.large
+            val behindPadding = 8.dp
+            val behindColor = MaterialTheme.colorScheme.surface
+
             Box {
                 val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
+                // TODO: constants for expiration time, e.g. 60 * 60 * 8
                 val expirationColor =
                     if (!isSystemInDarkTheme()) {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> ExpiringFar
-                            expirationSeconds > (60 * 60 * 1) -> ExpiringMedium
+                            expirationSeconds > (60 * 60 * 8) -> MaterialTheme.colorScheme.onSurface
+                            expirationSeconds > (60 * 60 * 1) -> MaterialTheme.colorScheme.onSurface
                             else -> ExpiringSoon
                         }
                     } else {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> DarkExpiringFar
-                            expirationSeconds > (60 * 60 * 1) -> DarkExpiringMedium
-                            else -> DarkExpiringSoon
+                            expirationSeconds > (60 * 60 * 8) -> MaterialTheme.colorScheme.onSurface
+                            expirationSeconds > (60 * 60 * 1) -> MaterialTheme.colorScheme.onSurface
+                            else -> ExpiringSoon
                         }
                     }
 
-                val cornerPadding = 5.dp
-
-                val textStyle = MaterialTheme.typography.labelSmall
-                val behindShape = MaterialTheme.shapes.extraLarge
-                val behindPadding = 5.dp
-                val behindColor = MaterialTheme.colorScheme.surface
-
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
+                // gray expiration bar
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
@@ -383,13 +394,15 @@ fun GlimpseCard(
                     cancel()
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                // time
+                Box(
                     modifier = Modifier
                         .padding(cornerPadding)
+                        .align(Alignment.BottomStart)
                 ) {
                     Text(
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = if (expirationSeconds < (60 * 60 * 1)) FontWeight.Bold else
+                            FontWeight.Normal,
                         text = expirationSeconds.formatTimeSeconds(),
                         style = textStyle,
                         color = expirationColor,
@@ -403,6 +416,7 @@ fun GlimpseCard(
                 val heartsVal = integerResource(glimpse.hearts)
                 var hearts by remember { mutableIntStateOf(heartsVal) }
 
+                // hearts
                 Box(
                     modifier = Modifier
                         .clickable {
@@ -439,23 +453,30 @@ fun GlimpseCard(
 
                             else -> {
                                 icon = Icons.Filled.Favorite
+                                // TODO: specify colors in Colors.kt
                                 tint = Color(0xFFEA3323)
                             }
                         }
 
                         Icon(
                             imageVector = icon,
-                            contentDescription = stringResource(
-                                R.string
-                                    .heart_content_description
-                            ),
-                            tint = tint
+                            contentDescription = if (hearts == 0) {
+                                stringResource(
+                                    R.string
+                                        .no_hearts_content_description
+                                )
+                            } else {
+                                String.format(stringResource(
+                                    R.string.yes_hearts_content_description
+                                ), hearts)
+                            },
+                            tint = tint,
                         )
 
                         if (hearts > 0) {
                             Text(
                                 text = hearts.toString(),
-                                style = MaterialTheme.typography.labelLarge,
+                                style = textStyle,
                             )
                         }
                     }
@@ -464,7 +485,7 @@ fun GlimpseCard(
 
             Text(
                 text = stringResource(glimpse.time),
-                style = MaterialTheme.typography.labelLarge,
+                style = textStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -475,6 +496,7 @@ fun GlimpseCard(
     }
 }
 
+// TODO: animation manager!
 @Composable
 fun ShimmerAnimation(color: Color): Brush {
     val transition = rememberInfiniteTransition()
@@ -485,7 +507,6 @@ fun ShimmerAnimation(color: Color): Brush {
             color.copy(alpha = 0.55f),
             color.copy(alpha = 1f)
         )
-
 
     val translateAnimation by transition.animateFloat(
         initialValue = 0f,
@@ -527,7 +548,11 @@ fun YouDoUDropDown(
         onDismissRequest = {
             isContextMenuVisible.value = false
         },
-        offset = dpOffset
+        offset = dpOffset,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
+        shadowElevation = 3.dp,
+        shape = MaterialTheme.shapes.small
     ) {
         dropDownItems.forEach {
             DropdownMenuItem(
@@ -539,7 +564,7 @@ fun YouDoUDropDown(
                     Text(
                         text = it.text,
                         color = it.color,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             )
@@ -596,8 +621,8 @@ fun Int.getUri(context: Context): Uri {
 
 @Preview
 @Composable
-fun PreviewGlimpseCard() {
-    var glimpse = previewGlimpses[0]
+fun PreviewGlimpseCardSoon() {
+    var glimpse = previewGlimpses[1]
 
     GlimpseCard(
         modifier = Modifier,
@@ -607,6 +632,33 @@ fun PreviewGlimpseCard() {
     )
 }
 
+@Preview
+@Composable
+fun PreviewGlimpseCardMedium() {
+    var glimpse = previewGlimpses[6]
+
+    GlimpseCard(
+        modifier = Modifier,
+        glimpse = glimpse,
+        onClickGlimpse = { },
+        onRemoveGlimpse = { },
+    )
+}
+
+@Preview
+@Composable
+fun PreviewGlimpseCardFar() {
+    var glimpse = previewGlimpses[3]
+
+    GlimpseCard(
+        modifier = Modifier,
+        glimpse = glimpse,
+        onClickGlimpse = { },
+        onRemoveGlimpse = { },
+    )
+}
+
+@Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
 @Preview
 @Composable
 fun PreviewGlimpseGrid() {
