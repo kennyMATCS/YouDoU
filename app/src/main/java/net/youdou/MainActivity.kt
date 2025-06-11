@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -60,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.credentials.CredentialManager
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -69,19 +70,19 @@ import com.alorma.compose.settings.ui.SettingsCheckbox
 import com.alorma.compose.settings.ui.SettingsGroup
 import com.alorma.compose.settings.ui.SettingsRadioButton
 import com.alorma.compose.settings.ui.SettingsSwitch
-import net.youdou.ui.glimpse.Glimpse
-import net.youdou.ui.glimpse.GlimpseGrid
-import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
-import net.youdou.ui.theme.YouDoUTheme
-import net.youdou.ui.glimpse.previewGlimpses
-import net.youdou.ui.glimpse.record.GlimpseCamera
-import net.youdou.ui.theme.DarkExpiringSoon
-import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import net.youdou.ui.account.AccountSignInPage
 import net.youdou.ui.account.AccountSignUpPage
 import net.youdou.ui.account.AccountStartPage
+import net.youdou.ui.glimpse.Glimpse
+import net.youdou.ui.glimpse.GlimpseGrid
+import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
+import net.youdou.ui.glimpse.previewGlimpses
+import net.youdou.ui.glimpse.record.GlimpseCamera
+import net.youdou.ui.theme.DarkExpiringSoon
+import net.youdou.ui.theme.ExpiringSoon
+import net.youdou.ui.theme.YouDoUTheme
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
@@ -147,27 +148,42 @@ class MainActivity : ComponentActivity() {
                         startDestination = AccountStartPage,
 
                         enterTransition = {
-                            slideInVertically(
-                                initialOffsetY = { -40 }) + expandVertically(expandFrom = Alignment.CenterVertically) + scaleIn(
+                            slideInVertically(initialOffsetY = { -40 }) + expandVertically(
+                                expandFrom = Alignment.CenterVertically
+                            ) + scaleIn(
                                 transformOrigin = TransformOrigin(0.5f, 0f)
                             ) + fadeIn(initialAlpha = 0.3f)
                         },
 
                         exitTransition = {
-                            slideOutVertically(
-                                targetOffsetY = { -40 }) + shrinkVertically(shrinkTowards = Alignment.CenterVertically) + scaleOut(
+                            slideOutVertically(targetOffsetY = { -40 }) + shrinkVertically(
+                                shrinkTowards = Alignment.CenterVertically
+                            ) + scaleOut(
                                 transformOrigin = TransformOrigin(0.5f, 0f)
                             ) + fadeOut(targetAlpha = 0.3f)
                         },
 
                         ) {
+
                         var windowInsetsController =
                             WindowCompat.getInsetsController(window, window.decorView)
 
                         composable<AccountStartPage> {
                             AccountStartPage(
-                                navigateSignIn = { navController.navigate(route = AccountSignIn) },
-                                navigateSignUp = { navController.navigate(route = AccountSignUp) }
+                                navigateSignIn = {
+                                    navController.navigate(route = AccountSignIn) {
+                                        popUpTo(route = AccountSignIn) {
+                                            inclusive = true
+                                        }
+                                    }
+                                },
+                                navigateSignUp = {
+                                    navController.navigate(route = AccountSignUp) {
+                                        popUpTo(route = AccountSignUp) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
                             )
                         }
 
@@ -198,10 +214,18 @@ class MainActivity : ComponentActivity() {
                                 onClickGlimpse = { glimpse ->
                                     navController.navigate(
                                         route = glimpse
-                                    )
+                                    ) {
+                                        popUpTo(route = glimpse) {
+                                            inclusive = true
+                                        }
+                                    }
                                 },
                                 onClickSettings = {
-                                    navController.navigate(Settings)
+                                    navController.navigate(Settings) {
+                                        popUpTo(Settings) {
+                                            inclusive = true
+                                        }
+                                    }
                                 },
                                 canUseCameraCallback = canUseCameraCallback,
                                 canUseCameraAudioCallback = canUseCameraAudioCallback,

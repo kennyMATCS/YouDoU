@@ -8,62 +8,62 @@
     <!-- Preview 1 -->
     <string name="preview_1_name">Elena</string>
     <string name="preview_1_content_description">Placeholder image 1</string>
-    <string name="preview_1_date">May 5, 10:52 a.m.</string>
+    <string name="preview_1_date">10:52 a.m.</string>
 
     <!-- Preview 2 -->
     <string name="preview_2_name">Marisol</string>
     <string name="preview_2_content_description">Placeholder image 2</string>
-    <string name="preview_2_date">May 5, 2:03 p.m.</string>
+    <string name="preview_2_date">2:03 p.m.</string>
 
     <!-- Preview 3 -->
     <string name="preview_3_name">Kristy</string>
     <string name="preview_3_content_description">Placeholder image 3</string>
-    <string name="preview_3_date">May 5, 8:17 a.m.</string>
+    <string name="preview_3_date">8:17 a.m.</string>
 
     <!-- Preview 4 -->
     <string name="preview_4_name">Virgie</string>
     <string name="preview_4_content_description">Placeholder image 4</string>
-    <string name="preview_4_date">May 5, 4:55 p.m.</string>
+    <string name="preview_4_date">4:55 p.m.</string>
 
     <!-- Preview 5 -->
     <string name="preview_5_name">Buford</string>
     <string name="preview_5_content_description">Placeholder image 5</string>
-    <string name="preview_5_date">May 5, 11:42 a.m.</string>
+    <string name="preview_5_date">11:42 a.m.</string>
 
     <!-- Preview 6 -->
     <string name="preview_6_name">Liz</string>
     <string name="preview_6_content_description">Placeholder image 6</string>
-    <string name="preview_6_date">May 5, 1:23 p.m.</string>
+    <string name="preview_6_date">1:23 p.m.</string>
 
     <!-- Preview 7 -->
     <string name="preview_7_name">Ariel</string>
     <string name="preview_7_content_description">Placeholder image 7</string>
-    <string name="preview_7_date">May 5, 9:36 a.m.</string>
+    <string name="preview_7_date">9:36 a.m.</string>
 
     <!-- Preview 8 -->
     <string name="preview_8_name">Noelle</string>
     <string name="preview_8_content_description">Placeholder image 8</string>
-    <string name="preview_8_date">May 5, 7:04 p.m.</string>
+    <string name="preview_8_date">7:04 p.m.</string>
 
     <!-- Preview 9 -->
     <string name="preview_9_name">Marion</string>
     <string name="preview_9_content_description">Placeholder image 9</string>
-    <string name="preview_9_date">May 5, 5:28 p.m.</string>
+    <string name="preview_9_date">5:28 p.m.</string>
 
     <!-- Preview 10 -->
     <string name="preview_10_name">Rosie</string>
     <string name="preview_10_content_description">Placeholder image 10</string>
-    <string name="preview_10_date">May 5, 3:12 p.m.</string>
+    <string name="preview_10_date">3:12 p.m.</string>
 
     <!-- Preview 11 -->
     <string name="preview_11_name">Hoyt</string>
     <string name="preview_11_content_description">Placeholder image 11</string>
-    <string name="preview_11_date">May 5, 6:05 a.m.</string>
+    <string name="preview_11_date">6:05 a.m.</string>
 
     <!-- Preview 12 -->
     <string name="preview_12_name">Jordan</string>
     <string name="preview_12_content_description">Placeholder image 12</string>
-    <string name="preview_12_date">May 5, 12:48 p.m.</string>
+    <string name="preview_12_date">12:48 p.m.</string>
     <string name="exo_play_pause_content_description">Play-pause button</string>
 
     <string name="heart_content_description">Heart to favorite glimpses</string>
@@ -78,9 +78,14 @@
     <string name="recording_timeout_content_description">Timeout notification</string>
     <string name="sign_in_text">Sign in</string>
     <string name="sign_up_text">Sign up</string>
-    <string name="place_holder_username_sign_in_field">E-mail</string>
+    <string name="place_holder_username_sign_in_field">Username</string>
     <string name="place_holder_password_field">Password</string>
     <string name="place_holder_password_confirm_field">Confirm password</string>
-    <string name="place_holder_username_sign_up_field">E-mail</string>
+    <string name="place_holder_username_sign_up_field">Username</string>
     <string name="place_holder_phone_number_field">Phone #</string>
+    <!-- TODO: hardcoded, just make sure to adjust if requirements change -->
+    <string name="username_invalid_message">Length must be between 8 and 254 characters</string>
+    <string name="password_invalid_message">Length must be between 8 and 32 characters</string>
+    <string name="phone_number_invalid_message">Phone number is invalid</string>
+    <string name="confirm_password_invalid_message">Passwords do not match</string>
 </resources>
