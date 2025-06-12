@@ -3,6 +3,11 @@ package net.youdou.ui.glimpse
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -20,9 +25,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -55,16 +62,25 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import net.youdou.R
@@ -72,6 +88,8 @@ import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import net.youdou.ui.theme.DarkExpiringSoon
+import net.youdou.ui.theme.HeartRed
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
@@ -93,11 +111,21 @@ data class DropDownItem(
     val onItemClick: () -> Unit
 )
 
+// TODO: like animation
+// TODO: vibrate when liking
+
+
+
+
+
+
+// TODO: better accessibility content descriptions
 // TODO: big plus button in empty glimpse at the bottom to entice people to purchase premium
+// TODO: link to store when pressing heart
+
 // TODO: add functionality
-// TODO: custom color
 val dropDownItems = listOf(
-    DropDownItem("Report", color = Color.Red, onItemClick = { }),
+    DropDownItem("Report", color = Color.Red, onItemClick = { } ),
 )
 
 var previewGlimpses = listOf(
@@ -223,13 +251,17 @@ var previewGlimpses = listOf(
     )
 )
 
+// TODO: disable haptics in settings
+// TODO: clicking hearts and plus at bottom should prompt to buy new things, we don't need a
+//  store tab
+// TODO: introduction tutorial
 // TODO: force ui check before pushing code
-// TODO: fix dark mode in ui check
-// TODO: better landscape mode
+// TODO: fix dark mode in ui check. also look through dark mode needs to be better
+// TODO: better landscape mode OR force portrait on phone
 // TODO: create settings
 // TODO: adjust in-out animation. learn how to use animation manager
 // TODO: fix ui check FOR EVERYTHING
-// TODO: unit testing
+// TODO: unit testing -- espresso
 // TODO: make code look better, clean it up! more functions!
 // TODO: visit weatherspoon
 // TODO: improve dropdown popup
@@ -238,7 +270,8 @@ var previewGlimpses = listOf(
 fun GlimpseGrid(
     modifier: Modifier, glimpses: MutableList<Glimpse>, contentPadding: PaddingValues,
     onClickGlimpse:
-        (Glimpse) -> Unit
+        (Glimpse) -> Unit,
+    isPremium: Boolean
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
@@ -280,7 +313,7 @@ fun GlimpseGrid(
         verticalArrangement = Arrangement.spacedBy(arrangementPadding)
     ) {
         items(
-            items = glimpses,
+            items = if (!isPremium) glimpses.take(6) else glimpses,
         ) {
             GlimpseCard(
                 modifier = Modifier,
@@ -290,6 +323,65 @@ fun GlimpseGrid(
                     // TODO: glimpses expiring
                     // glimpses.remove(glimpse)
                 }
+            )
+        }
+        if (!isPremium) {
+            item {
+                GlimpsePurchaseCard(modifier = Modifier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit)) {
+    Surface(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(8.dp),
+        shadowElevation = 5.dp,
+        tonalElevation = 5.dp,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        content()
+    }
+}
+
+// TODO: clickable purchase card that prompts to store
+// TODO; shiny gradient like with hearts for purchase card
+@Composable
+fun GlimpsePurchaseCard(
+    modifier: Modifier,
+) {
+    // hard-coded
+    val cornerRadiusDp = 15.dp
+
+    GlimpseCardBase(modifier) {
+        Box(
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(4.dp)
+                .clip(MaterialTheme.shapes.large)
+                .dashedBorder(strokeWidth = 7.dp, color = MaterialTheme.colorScheme.outline,
+                    cornerRadiusDp = cornerRadiusDp)
+                .clickable {
+
+                },
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.outline_add),
+                contentDescription = stringResource(R.string.glimpse_purchase_content_description),
+                modifier = Modifier
+                    .graphicsLayer(1f)
+                    .size(200.dp)
+                    .align(Alignment.Center),
+                tint = MaterialTheme.colorScheme.secondary
+            )
+
+            Image(
+                painter = painterResource(R.drawable.transparent_background),
+                contentDescription = stringResource(R.string.glimpse_purchase_content_description),
+                alpha = 0f
             )
         }
     }
@@ -305,30 +397,15 @@ fun GlimpseCard(
     var isContextMenuVisible = remember { mutableStateOf(false) }
     var contextMenuOffset = remember { mutableStateOf(Offset.Zero) }
 
-    Surface(
+    GlimpseCardBase(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(8.dp)
-            .combinedClickable(
-                true,
-                onClick = {
-                    onClickGlimpse(glimpse)
-                },
-                onLongClick = {
-                    isContextMenuVisible.value = true
-                }
-            )
-            .pointerInteropFilter {
-                contextMenuOffset.value = Offset(it.x, it.y)
-                false
-            },
-        shadowElevation = 5.dp,
-        tonalElevation = 5.dp,
-        shape = MaterialTheme.shapes.large,
     ) {
         Box {
             YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset)
         }
+
+        val farSeconds = integerResource(R.integer.far_seconds)
+        val mediumSeconds = integerResource(R.integer.medium_seconds)
 
         Column(
             modifier = Modifier
@@ -345,25 +422,24 @@ fun GlimpseCard(
                 val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
-                // TODO: constants for expiration time, e.g. 60 * 60 * 8
                 val expirationColor =
                     if (!isSystemInDarkTheme()) {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> MaterialTheme.colorScheme.onSurface
-                            expirationSeconds > (60 * 60 * 1) -> MaterialTheme.colorScheme.onSurface
-                            else -> ExpiringSoon
+                            expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
+                            expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
+                            else -> MaterialTheme.colorScheme.error
                         }
                     } else {
                         when {
-                            expirationSeconds > (60 * 60 * 8) -> MaterialTheme.colorScheme.onSurface
-                            expirationSeconds > (60 * 60 * 1) -> MaterialTheme.colorScheme.onSurface
-                            else -> ExpiringSoon
+                            expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
+                            expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
+                            else -> MaterialTheme.colorScheme.error
                         }
                     }
 
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
-                // gray expiration bar
+                // gray expiration bar and thumnbail
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
@@ -371,7 +447,7 @@ fun GlimpseCard(
                         .clip(MaterialTheme.shapes.medium)
                         .drawWithContent {
                             drawContent()
-                            if (expirationSeconds < 60 * 60) {
+                            if (expirationSeconds < mediumSeconds) {
                                 drawRect(
                                     color = Color(0, 0, 0, 125),
                                     size = Size(
@@ -381,6 +457,19 @@ fun GlimpseCard(
                                 )
                             }
                         }
+                        .combinedClickable(
+                            true,
+                            onClick = {
+                                onClickGlimpse(glimpse)
+                            },
+                            onLongClick = {
+                                isContextMenuVisible.value = true
+                            }
+                        )
+                        .pointerInteropFilter {
+                            contextMenuOffset.value = Offset(it.x, it.y)
+                            false
+                        },
                 )
 
                 // TODO: change when expiration data isn't hardcoded
@@ -401,7 +490,7 @@ fun GlimpseCard(
                         .align(Alignment.BottomStart)
                 ) {
                     Text(
-                        fontWeight = if (expirationSeconds < (60 * 60 * 1)) FontWeight.Bold else
+                        fontWeight = if (expirationSeconds < mediumSeconds) FontWeight.Bold else
                             FontWeight.Normal,
                         text = expirationSeconds.formatTimeSeconds(),
                         style = textStyle,
@@ -416,11 +505,24 @@ fun GlimpseCard(
                 val heartsVal = integerResource(glimpse.hearts)
                 var hearts by remember { mutableIntStateOf(heartsVal) }
 
+                val context = LocalContext.current
+                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(Context
+                        .VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                    vibratorManager.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+
                 // hearts
                 Box(
                     modifier = Modifier
+                        .clip(behindShape)
                         .clickable {
                             hearts++
+
+                            vibrate(vibrator)
                         }
                         .align(Alignment.BottomEnd)
                 ) {
@@ -454,7 +556,7 @@ fun GlimpseCard(
                             else -> {
                                 icon = Icons.Filled.Favorite
                                 // TODO: specify colors in Colors.kt
-                                tint = Color(0xFFEA3323)
+                                tint = HeartRed
                             }
                         }
 
@@ -466,9 +568,11 @@ fun GlimpseCard(
                                         .no_hearts_content_description
                                 )
                             } else {
-                                String.format(stringResource(
-                                    R.string.yes_hearts_content_description
-                                ), hearts)
+                                String.format(
+                                    stringResource(
+                                        R.string.yes_hearts_content_description
+                                    ), hearts
+                                )
                             },
                             tint = tint,
                         )
@@ -490,10 +594,29 @@ fun GlimpseCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 3.dp)
+                    .padding(vertical = 4.dp)
             )
         }
     }
+}
+
+private fun vibrate(vibrator: Vibrator) {
+    val timings: LongArray = longArrayOf(
+        25, 25, 50, 25, 25, 25, 25, 25, 25, 25, 25
+    ).map {
+        it + 10
+    }.toLongArray()
+
+    val amplitudes: IntArray = intArrayOf(
+        38, 77, 79, 84, 92, 99, 102, 105, 90, 77, 38,
+    ).map {
+        it / 10
+    }.toIntArray()
+
+
+    val repeatIndex = -1 // Do not repeat.
+
+    vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, repeatIndex))
 }
 
 // TODO: animation manager!
@@ -578,6 +701,31 @@ enum class DetailPaneBreakpoint {
     EXPANDED
 }
 
+private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp: Dp) = composed(
+    factory = {
+        val density = LocalDensity.current
+        val strokeWidthPx = density.run { strokeWidth.toPx() }
+        val cornerRadiusPx = density.run { cornerRadiusDp.toPx() }
+
+        this.then(
+            Modifier.drawWithCache {
+                onDrawBehind {
+                    val stroke = Stroke(
+                        width = strokeWidthPx,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(25f, 15f), 0f)
+                    )
+
+                    drawRoundRect(
+                        color = color,
+                        style = stroke,
+                        cornerRadius = CornerRadius(cornerRadiusPx)
+                    )
+                }
+            }
+        )
+    }
+)
+
 private fun Long.formatTimeSeconds(): String {
     return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
         StringBuilder().apply {
@@ -635,7 +783,7 @@ fun PreviewGlimpseCardSoon() {
 @Preview
 @Composable
 fun PreviewGlimpseCardMedium() {
-    var glimpse = previewGlimpses[6]
+    var glimpse = previewGlimpses[2]
 
     GlimpseCard(
         modifier = Modifier,
@@ -658,6 +806,12 @@ fun PreviewGlimpseCardFar() {
     )
 }
 
+@Preview
+@Composable
+fun PreviewGlimpsePurchaseCard() {
+    GlimpsePurchaseCard(modifier = Modifier)
+}
+
 @Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
 @Preview
 @Composable
@@ -666,6 +820,7 @@ fun PreviewGlimpseGrid() {
         modifier = Modifier,
         glimpses = previewGlimpses.toMutableList(),
         contentPadding = PaddingValues(4.dp),
-        onClickGlimpse = { }
+        onClickGlimpse = { },
+        isPremium = false
     )
 }

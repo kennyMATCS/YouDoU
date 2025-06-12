@@ -20,7 +20,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -103,6 +102,7 @@ class MainActivity : ComponentActivity() {
     lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     var canUseCameraCallback = mutableStateOf(false)
     var canUseCameraAudioCallback = mutableStateOf(false)
+    var isPremium = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -209,6 +209,7 @@ class MainActivity : ComponentActivity() {
                             YouDoUScaffold(
                                 activity = activity,
                                 glimpses = previewGlimpses,
+                                isPremium = isPremium,
                                 onClickGlimpse = { glimpse ->
                                     navController.navigate(
                                         route = glimpse
@@ -264,7 +265,8 @@ fun YouDoUScaffold(
     activity: MainActivity?,
     canUseCameraCallback: MutableState<Boolean>,
     canUseCameraAudioCallback: MutableState<Boolean>,
-    uri: MutableState<Uri?>
+    uri: MutableState<Uri?>,
+    isPremium: Boolean
 ) {
     var start = AppDestinations.VIEW
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
@@ -307,6 +309,7 @@ fun YouDoUScaffold(
                 AppDestinations.VIEW.pageNumber -> {
                     GlimpseGrid(
                         modifier = Modifier,
+                        isPremium = isPremium,
                         glimpses = glimpses.toMutableList(),
                         contentPadding = innerPadding,
                         onClickGlimpse = onClickGlimpse
@@ -475,7 +478,8 @@ fun PreviewScaffold() {
         activity = null,
         canUseCameraCallback = remember { mutableStateOf(true) },
         canUseCameraAudioCallback = remember { mutableStateOf(true) },
-        uri = remember { mutableStateOf(null) }
+        uri = remember { mutableStateOf(null) },
+        isPremium = false
     )
 }
 

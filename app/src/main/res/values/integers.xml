@@ -44,4 +44,6 @@
     <integer name="password_min_length">8</integer>
     <integer name="phone_min_length">10</integer>
     <integer name="username_min_length">5</integer>
+    <integer name="far_seconds">28800</integer>
+    <integer name="medium_seconds">3600</integer>
 </resources>

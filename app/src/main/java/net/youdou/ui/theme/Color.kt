@@ -11,3 +11,6 @@ val LightPowderBlue = Color(0xFF9FB7FF)
 val LightPink = Color(0xFFEFB8C8)
 
 val ExpiringSoon = Color(197, 0, 0, 255)
+val DarkExpiringSoon = Color(255, 82, 82, 255)
+
+val HeartRed = Color(0xFFEA3323)
