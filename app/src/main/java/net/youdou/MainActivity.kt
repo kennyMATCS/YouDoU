@@ -98,6 +98,9 @@ object AccountSignIn
 @Serializable
 object AccountSignUp
 
+// TODO: go through all suppressions and clear unnecessary ones
+// TODO: find a way to test on other phones
+
 class MainActivity : ComponentActivity() {
     lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     var canUseCameraCallback = mutableStateOf(false)

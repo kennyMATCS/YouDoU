@@ -18,6 +18,14 @@
       </SelectionState>
       <SelectionState runConfigName="YouDoU.app">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-06-13T01:48:38.105432832Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=15231FDD4000CR" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="PreviewAccountStartPage">
         <option name="selectionMode" value="DROPDOWN" />

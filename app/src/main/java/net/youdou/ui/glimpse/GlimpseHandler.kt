@@ -7,13 +7,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.view.HapticFeedbackConstants
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,7 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -68,8 +60,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,18 +74,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import net.youdou.R
-import net.youdou.ui.theme.ExpiringSoon
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
-import net.youdou.ui.theme.DarkExpiringSoon
 import net.youdou.ui.theme.HeartRed
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 data class Glimpse(
-    val author: Int,
     val duration: Int,
     val thumbnail: Int,
     val contentDescription: Int,
@@ -107,16 +94,39 @@ data class Glimpse(
 
 data class DropDownItem(
     val text: String,
-    val color: Color,
+    val isError: Boolean,
     val onItemClick: () -> Unit
 )
 
+// TODO: live heart updates!!! keeps us all connected
+
 // TODO: like animation
-// TODO: vibrate when liking
+// TODO: like pop-up with heart count
 
+// TODO: report feature done
 
+// TODO: disable spaces in copy and paste with textfield for login
+// TODO: maintain video location after exiting glimpse
+// TODO: don't reset app when orientation changed
+// TODO: remove glimpse after watched
 
+// TODO: better login form error messages
 
+// TODO: landscape mode remove overlapping camera ON glimpse view AND player view
+
+// TODO: logo
+
+// TODO: admob
+
+// TODO: video duration on glimpse dropdown menu
+// TODO: video duration on glimpse exoplayer
+
+// TODO: subreddit
+
+// TODO: improve record glimpse UI
+// TODO: add record duration in top right of record UI
+
+// TODO: clean up login form
 
 
 // TODO: better accessibility content descriptions
@@ -124,13 +134,16 @@ data class DropDownItem(
 // TODO: link to store when pressing heart
 
 // TODO: add functionality
+
+const val GLIMPSE_DURATION_SPECIFIER = "%glimpse_duration"
+
 val dropDownItems = listOf(
-    DropDownItem("Report", color = Color.Red, onItemClick = { } ),
+    DropDownItem("Report", isError = true, onItemClick = { }),
+    DropDownItem("Length: $GLIMPSE_DURATION_SPECIFIER", isError = false, onItemClick = { }),
 )
 
 var previewGlimpses = listOf(
     Glimpse(
-        author = R.string.preview_1_name,
         duration = R.integer.preview_1_duration,
         thumbnail = R.drawable.preview_1,
         contentDescription = R.string.preview_1_content_description,
@@ -140,7 +153,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_1_hearts,
     ),
     Glimpse(
-        author = R.string.preview_2_name,
         duration = R.integer.preview_2_duration,
         thumbnail = R.drawable.preview_2,
         contentDescription = R.string.preview_2_content_description,
@@ -150,7 +162,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_2_hearts,
     ),
     Glimpse(
-        author = R.string.preview_3_name,
         duration = R.integer.preview_3_duration,
         thumbnail = R.drawable.preview_3,
         contentDescription = R.string.preview_3_content_description,
@@ -160,7 +171,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_3_hearts,
     ),
     Glimpse(
-        author = R.string.preview_4_name,
         duration = R.integer.preview_4_duration,
         thumbnail = R.drawable.preview_4,
         contentDescription = R.string.preview_4_content_description,
@@ -170,7 +180,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_4_hearts,
     ),
     Glimpse(
-        author = R.string.preview_5_name,
         duration = R.integer.preview_5_duration,
         thumbnail = R.drawable.preview_5,
         contentDescription = R.string.preview_5_content_description,
@@ -180,7 +189,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_5_hearts,
     ),
     Glimpse(
-        author = R.string.preview_6_name,
         duration = R.integer.preview_6_duration,
         thumbnail = R.drawable.preview_6,
         contentDescription = R.string.preview_6_content_description,
@@ -190,7 +198,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_6_hearts,
     ),
     Glimpse(
-        author = R.string.preview_7_name,
         duration = R.integer.preview_7_duration,
         thumbnail = R.drawable.preview_1,
         contentDescription = R.string.preview_7_content_description,
@@ -200,7 +207,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_7_hearts,
     ),
     Glimpse(
-        author = R.string.preview_8_name,
         duration = R.integer.preview_8_duration,
         thumbnail = R.drawable.preview_8,
         contentDescription = R.string.preview_8_content_description,
@@ -210,7 +216,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_8_hearts,
     ),
     Glimpse(
-        author = R.string.preview_9_name,
         duration = R.integer.preview_9_duration,
         thumbnail = R.drawable.preview_9,
         contentDescription = R.string.preview_9_content_description,
@@ -220,7 +225,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_9_hearts,
     ),
     Glimpse(
-        author = R.string.preview_10_name,
         duration = R.integer.preview_10_duration,
         thumbnail = R.drawable.preview_10,
         contentDescription = R.string.preview_10_content_description,
@@ -230,7 +234,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_10_hearts,
     ),
     Glimpse(
-        author = R.string.preview_11_name,
         duration = R.integer.preview_11_duration,
         thumbnail = R.drawable.preview_11,
         contentDescription = R.string.preview_11_content_description,
@@ -240,7 +243,6 @@ var previewGlimpses = listOf(
         hearts = R.integer.preview_11_hearts,
     ),
     Glimpse(
-        author = R.string.preview_12_name,
         duration = R.integer.preview_12_duration,
         thumbnail = R.drawable.preview_12,
         contentDescription = R.string.preview_12_content_description,
@@ -251,6 +253,8 @@ var previewGlimpses = listOf(
     )
 )
 
+// TODO: glimpse expiring animation. make it like fly away. also make times of glimpse 2 hours
+//  apart with first glimpse having time of like 10 seconds
 // TODO: disable haptics in settings
 // TODO: clicking hearts and plus at bottom should prompt to buy new things, we don't need a
 //  store tab
@@ -362,8 +366,10 @@ fun GlimpsePurchaseCard(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(4.dp)
                 .clip(MaterialTheme.shapes.large)
-                .dashedBorder(strokeWidth = 7.dp, color = MaterialTheme.colorScheme.outline,
-                    cornerRadiusDp = cornerRadiusDp)
+                .dashedBorder(
+                    strokeWidth = 7.dp, color = MaterialTheme.colorScheme.outline,
+                    cornerRadiusDp = cornerRadiusDp
+                )
                 .clickable {
 
                 },
@@ -401,7 +407,7 @@ fun GlimpseCard(
         modifier = modifier
     ) {
         Box {
-            YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset)
+            YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
         }
 
         val farSeconds = integerResource(R.integer.far_seconds)
@@ -507,8 +513,10 @@ fun GlimpseCard(
 
                 val context = LocalContext.current
                 val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val vibratorManager = context.getSystemService(Context
-                        .VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                    val vibratorManager = context.getSystemService(
+                        Context
+                            .VIBRATOR_MANAGER_SERVICE
+                    ) as VibratorManager
                     vibratorManager.defaultVibrator
                 } else {
                     @Suppress("DEPRECATION")
@@ -526,17 +534,12 @@ fun GlimpseCard(
                         }
                         .align(Alignment.BottomEnd)
                 ) {
-                    val color: Brush =
-                        if (hearts == 0) ShimmerAnimation(behindColor) else
-                            Brush.linearGradient(
-                                colors = listOf(behindColor, behindColor)
-                            )
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(cornerPadding)
                             .clip(behindShape)
-                            .background(color)
+                            .background(behindColor)
                             .padding(behindPadding),
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -601,62 +604,28 @@ fun GlimpseCard(
 }
 
 private fun vibrate(vibrator: Vibrator) {
+    // must have equal amount in each array
+    // TODO: unit test to ensure array have equal length?
+    // TODO: constants for this? it + 10
     val timings: LongArray = longArrayOf(
-        25, 25, 50, 25, 25, 25, 25, 25, 25, 25, 25
-    ).map {
-        it + 10
-    }.toLongArray()
+        35, 35, 60, 35, 35, 35, 35, 35, 35, 35, 35, 35
+    )
 
     val amplitudes: IntArray = intArrayOf(
-        38, 77, 79, 84, 92, 99, 102, 105, 90, 77, 38,
-    ).map {
-        it / 10
-    }.toIntArray()
-
+        12, 25, 26, 28, 30, 33, 34, 35, 30, 25, 19, 12,
+    )
 
     val repeatIndex = -1 // Do not repeat.
 
     vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, repeatIndex))
 }
 
-// TODO: animation manager!
-@Composable
-fun ShimmerAnimation(color: Color): Brush {
-    val transition = rememberInfiniteTransition()
-
-    val shimmer =
-        listOf(
-            color.copy(alpha = 1f),
-            color.copy(alpha = 0.55f),
-            color.copy(alpha = 1f)
-        )
-
-    val translateAnimation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1200f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1300,
-                easing = FastOutSlowInEasing,
-                delayMillis = 2000
-            ),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmer,
-        end = Offset(translateAnimation, translateAnimation)
-    )
-
-    return brush
-}
-
 @Composable
 fun YouDoUDropDown(
     dropDownItems: List<DropDownItem>,
     isContextMenuVisible: MutableState<Boolean>,
-    contextMenuOffset: MutableState<Offset>
+    contextMenuOffset: MutableState<Offset>,
+    glimpse: Glimpse
 ) {
     val density = LocalDensity.current
     val dpOffset = with(density) {
@@ -680,14 +649,19 @@ fun YouDoUDropDown(
         dropDownItems.forEach {
             DropdownMenuItem(
                 onClick = {
-                    it.onItemClick
+                    it.onItemClick()
                     isContextMenuVisible.value = false
                 },
                 text = {
                     Text(
-                        text = it.text,
-                        color = it.color,
-                        style = MaterialTheme.typography.bodyLarge
+                        text = it.text.replace(
+                            GLIMPSE_DURATION_SPECIFIER,
+                            integerResource(glimpse.duration).toLong().formatTimeSeconds
+                                (appendZero = false)
+                        ),
+                        color = if (it.isError) MaterialTheme.colorScheme.error else
+                            MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             )
@@ -726,7 +700,7 @@ private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp:
     }
 )
 
-private fun Long.formatTimeSeconds(): String {
+private fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
     return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
         StringBuilder().apply {
             if (hours > 1) {
@@ -744,10 +718,11 @@ private fun Long.formatTimeSeconds(): String {
                     )
                 )
             } else {
+                val specifier = if (appendZero) "%02d:%02d" else "%d:%02d"
                 append(
                     String.format(
                         Locale.US,
-                        "%02d:%02d", minutes, seconds
+                        specifier, minutes, seconds
                     )
                 )
             }
