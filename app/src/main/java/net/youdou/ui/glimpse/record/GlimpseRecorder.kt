@@ -22,6 +22,7 @@ import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -29,9 +30,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -42,6 +46,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,8 +59,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
@@ -63,8 +74,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import net.youdou.MainActivity
 import net.youdou.R
+import net.youdou.ui.glimpse.formatTimeSeconds
 import net.youdou.ui.glimpse.getUri
 import net.youdou.ui.glimpse.player.GlimpseRecordPlayer
 import java.io.File
@@ -72,6 +85,8 @@ import java.util.Locale
 import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+
+const val delayBeforeShowingEditor = 1000L
 
 @OptIn(ExperimentalCamera2Interop::class)
 @Composable
@@ -104,6 +119,7 @@ fun GlimpseCamera(
     val cameraProvider: MutableState<ProcessCameraProvider?> = remember { mutableStateOf(null) }
     val preview: MutableState<Preview?> = remember { mutableStateOf(null) }
 
+    // TODO: separate function for me below?
     activity?.let {
         var requestList = mutableListOf<String>()
 
@@ -176,7 +192,10 @@ fun GlimpseCamera(
     }
 
 
-    if (uri.value != null) {
+    val isDelayBeforeShowingEditor = remember { mutableStateOf(false) }
+
+    // TODO: make this if statement cleaner and more readable
+    if (uri.value != null && !isDelayBeforeShowingEditor.value) {
         Box(
             modifier = modifier
                 .padding(contentPadding)
@@ -224,35 +243,79 @@ fun GlimpseCamera(
                 val recordImage =
                     AnimatedImageVector.animatedVectorResource(R.drawable.anim_flip_camera)
                 val rotated = remember { mutableStateOf(false) }
+                var recordingLength = remember { mutableLongStateOf(0) }
 
-                IconButton(
-                    onClick = {
-                        flipCamera(
-                            lensFacing = lensFacing,
-                            rotated = rotated,
-                            cameraSelector = cameraSelector,
-                            recording = recording,
-                            context = context,
-                            lifecycleOwner = lifecycleOwner,
-                            videoCapture = videoCapture,
-                            preview = preview,
-                            cameraProvider = cameraProvider
-                        )
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(70.dp)
-                        .padding(16.dp)
-                ) {
-                    Image(
-                        painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
-                        contentDescription = stringResource(R.string.flip_camera_content_description),
+                LaunchedEffect(isRecording.value) {
+                    while (isRecording.value) {
+                        delay(1000L)
+
+                        recordingLength.longValue += 1L
+                    }
+                }
+
+                // TODO: add constants for shadows throughout app
+
+                val cornerPadding = 12.dp
+                AnimatedVisibility(visible = isRecording.value) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.large,
                         modifier = Modifier
-                            .fillMaxSize()
-                    )
+                            .alpha(if (isRecording.value) 1f else 0f)
+                            .padding(cornerPadding),
+                        shadowElevation = 5.dp,
+                        tonalElevation = 5.dp
+                    ) {
+                        Text(
+                            text = recordingLength.longValue.formatTimeSeconds(appendZero = false),
+                            modifier = Modifier
+                                .padding(8.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(cornerPadding)
+                ) {
+                    IconButton(
+                        onClick = {
+                            flipCamera(
+                                lensFacing = lensFacing,
+                                rotated = rotated,
+                                cameraSelector = cameraSelector,
+                                recording = recording,
+                                context = context,
+                                lifecycleOwner = lifecycleOwner,
+                                videoCapture = videoCapture,
+                                preview = preview,
+                                cameraProvider = cameraProvider
+                            )
+                        },
+                        modifier = Modifier
+                            .size(55.dp)
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Image(
+                            painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
+                            contentDescription = stringResource(R.string.flip_camera_content_description),
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+                    }
+                }
+
+                LaunchedEffect(isDelayBeforeShowingEditor.value) {
+                    delay(1000L) // hardcoded for a second
+                    isDelayBeforeShowingEditor.value = false
                 }
 
                 val interactionSource = remember { MutableInteractionSource() }
+                val glimpseRecordDelay = integerResource(R.integer.glimpse_record_delay).toLong()
+
                 IconButton(
                     onClick = {
                         if (!isRecording.value) {
@@ -263,7 +326,8 @@ fun GlimpseCamera(
                             }
                         } else {
                             stopRecording(isRecording, recording, atEnd)
-                            secondsUntilCanRecordAgain.value = 60 * 60 * 24
+                            isDelayBeforeShowingEditor.value = true
+                            secondsUntilCanRecordAgain.value = glimpseRecordDelay
                         }
                     },
                     modifier = Modifier
@@ -287,20 +351,30 @@ fun GlimpseCamera(
                 }
             }
 
+            // TODO: make this better???
         } else {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                Text(
-                    text = stringResource(R.string.camera_and_audio_required),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge,
+                Surface(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                )
+                        .padding(16.dp)
+                        .align(Alignment.Center),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 5.dp,
+                    tonalElevation = 5.dp
+                ) {
+                    // TODO: make the permissions text more specific. see what other apps do
+                    Text(
+                        text = stringResource(R.string.camera_and_audio_required),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .padding(8.dp)
+                    )
+                }
             }
         }
     }
@@ -357,7 +431,7 @@ fun PreviewGlimpseCamera() {
         canUseCamera = remember { mutableStateOf(true) },
         canUseCameraAudio = remember { mutableStateOf(true) },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
-        isRecording = remember { mutableStateOf(false) },
+        isRecording = remember { mutableStateOf(true) },
         atEnd = remember { mutableStateOf(false) },
         uri = remember { mutableStateOf(null) },
         activity = null,
@@ -378,6 +452,9 @@ fun PreviewGlimpseCameraNoPermissions() {
     )
 }
 
+// TODO: fix this little guy!
+//  we could add a parent composable that doesn't have the exoplayer in it, but the content of the
+//  composable in the primary code is an actual exoplayer
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun PreviewGlimpseRecording() {

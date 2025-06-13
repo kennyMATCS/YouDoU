@@ -78,7 +78,6 @@ import net.youdou.ui.glimpse.GlimpseGrid
 import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
 import net.youdou.ui.glimpse.previewGlimpses
 import net.youdou.ui.glimpse.record.GlimpseCamera
-import net.youdou.ui.theme.ExpiringSoon
 import net.youdou.ui.theme.YouDoUTheme
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
@@ -363,7 +362,7 @@ fun YouDoUTopBar(
                             if (secondsUntilCanRecordAgain.value > 0) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
-                    color = ExpiringSoon
+                    color = MaterialTheme.colorScheme.error
                 )
 
                 // TODO: add link to app in final version

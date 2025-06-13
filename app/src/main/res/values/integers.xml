@@ -38,6 +38,7 @@
     <integer name="preview_10_hearts">0</integer>
     <integer name="preview_11_hearts">0</integer>
     <integer name="preview_12_hearts">0</integer>
+    <!-- Better names for this stuff -->
     <integer name="username_max_length">254</integer>
     <integer name="password_max_length">32</integer>
     <integer name="phone_max_length">10</integer>
@@ -46,4 +47,5 @@
     <integer name="username_min_length">5</integer>
     <integer name="far_seconds">28800</integer>
     <integer name="medium_seconds">3600</integer>
+    <integer name="glimpse_record_delay">86400</integer>
 </resources>
