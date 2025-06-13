@@ -25,6 +25,8 @@ fun GlimpseRecordPlayer(
 ) {
     val context = LocalContext.current
 
+    // TODO: how do we feel about insets when showing system bars in exoplayer?
+
     val exoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
         .build()

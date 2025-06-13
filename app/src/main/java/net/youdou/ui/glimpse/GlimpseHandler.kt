@@ -98,42 +98,52 @@ data class DropDownItem(
     val onItemClick: () -> Unit
 )
 
-// TODO: live heart updates!!! keeps us all connected
+// TODO: live heart updates!!! this should have an animation too, keeps us all connected
 
 // TODO: like animation
 // TODO: like pop-up with heart count
 
 // TODO: report feature done
 
-// TODO: disable spaces in copy and paste with textfield for login
+// TODO: disable spaces in copy and paste with text field for login
 // TODO: maintain video location after exiting glimpse
 // TODO: don't reset app when orientation changed
 // TODO: remove glimpse after watched
 
-// TODO: better login form error messages
+// TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
+//  spigot
+
+// TODO: is there a way to stop using mutablestate.value so much?
+
+// TODO: check all strings. See if they make sense
+
+// TODO: better login form error messages. model from Cloudflare login
+// TODO: clean up login form, specifically the labels for text fields
 
 // TODO: landscape mode remove overlapping camera ON glimpse view AND player view
 
 // TODO: logo
+// TODO; playful, animated, baldi's basics vibe
 
 // TODO: admob
 
-// TODO: video duration on glimpse dropdown menu
-// TODO: video duration on glimpse exoplayer
+// TODO: ask nico about beta testing.
+// TODO: button to reset app state for beta testers, e.g. reset recording timer or default glimpses
 
 // TODO: subreddit
 
 // TODO: improve record glimpse UI
+// TODO: redo button shadows and length
 // TODO: add record duration in top right of record UI
 
-// TODO: clean up login form
-
-
 // TODO: better accessibility content descriptions
-// TODO: big plus button in empty glimpse at the bottom to entice people to purchase premium
-// TODO: link to store when pressing heart
+// TODO: big plus button in empty glimpse at the bottom so people have a way to purchase premium
 
-// TODO: add functionality
+// TODO: one purchasable thing only: premium!
+// TODO: make popup to show benefits of premium. this could be a nice pop-up composable in the
+//  middle of the screen
+
+// TODO: find a way to reduce minsdk. all people should be able to use the app :)
 
 const val GLIMPSE_DURATION_SPECIFIER = "%glimpse_duration"
 
@@ -266,9 +276,22 @@ var previewGlimpses = listOf(
 // TODO: adjust in-out animation. learn how to use animation manager
 // TODO: fix ui check FOR EVERYTHING
 // TODO: unit testing -- espresso
+
 // TODO: make code look better, clean it up! more functions!
+// TODO: we should not get lost in the code!
+// TODO: we have lots of mutable states and if statements. see if we can clean them up
+
+// TODO: if we have more functions, we can have better names for stuff which means more readable
+//  code
 // TODO: visit weatherspoon
 // TODO: improve dropdown popup
+
+// TODO: maintain states for everything
+// TODO: how do we ensure local states are synced with API and people don't cheat the system
+// TODO: maybe only accept api calls for local app events if they are valid, i.e. times match up
+//  from server-side by what client is asking
+
+// TODO: ability to tap to focus with camera
 
 @Composable
 fun GlimpseGrid(
@@ -352,7 +375,6 @@ private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit
 }
 
 // TODO: clickable purchase card that prompts to store
-// TODO; shiny gradient like with hearts for purchase card
 @Composable
 fun GlimpsePurchaseCard(
     modifier: Modifier,
@@ -700,7 +722,9 @@ private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp:
     }
 )
 
-private fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
+// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
+//  classes are referencing this which is why im asking
+fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
     return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
         StringBuilder().apply {
             if (hours > 1) {

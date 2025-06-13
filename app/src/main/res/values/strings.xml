@@ -71,11 +71,13 @@
     <string name="camera_button_content_description">Record button</string>
     <string name="flip_camera_content_description">Flip camera</string>
     <string name="recording_timeout_confirm_title">Recording timeout</string>
+    <!-- TODO: remove hard code -->
     <string name="recording_timeout_confirm_message">Glimpses can only be recorded once every 24 hours. Are you sure you would like to continue?</string>
     <string name="share_message">Check out %app_name%, a social media app where you can share your unfiltered self. Viewership is equitably shared on %app_name%, which means a view for one is a view for all!</string>
     <string name="recording_timeout_notify_title">Timeout notification</string>
     <string name="recording_timeout_notify_message">You are currently timed out from recording a new glimpse.</string>
-    <string name="camera_and_audio_required">Camera and recording audio permissions are required to create glimpses. Please allow the respective settings to create a glimpse.</string>
+    <!-- TODO: little settings gear icon to direct people to settings -->
+    <string name="camera_and_audio_required">Camera and or audio permissions disabled which are required to record glimpses. \n\nPlease enable the respective settings to record a glimpse.</string>
     <string name="recording_timeout_content_description">Timeout notification</string>
     <string name="sign_in_text">Sign in</string>
     <string name="sign_up_text">Sign up</string>
@@ -84,6 +86,7 @@
     <string name="place_holder_password_confirm_field">Confirm password</string>
     <string name="place_holder_username_sign_up_field">Username</string>
     <string name="place_holder_phone_number_field">Phone #</string>
+    <!-- TODO: remove hard code -->
     <!-- TODO: hardcoded, just make sure to adjust if requirements change -->
     <string name="username_invalid_message">Length must be between 8 and 254 characters</string>
     <string name="password_invalid_message">Length must be between 8 and 32 characters</string>

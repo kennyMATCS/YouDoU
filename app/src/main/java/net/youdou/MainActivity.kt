@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -78,7 +77,6 @@ import net.youdou.ui.glimpse.GlimpseGrid
 import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
 import net.youdou.ui.glimpse.previewGlimpses
 import net.youdou.ui.glimpse.record.GlimpseCamera
-import net.youdou.ui.theme.ExpiringSoon
 import net.youdou.ui.theme.YouDoUTheme
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
@@ -355,15 +353,17 @@ fun YouDoUTopBar(
                 YouDoUTopText()
             },
             actions = {
+                val iconPadding = 10.dp
+
                 Text(
                     text = secondsUntilCanRecordAgain.value.formatTimeSeconds(),
                     modifier = Modifier
-                        .padding(horizontal = 10.dp)
+                        .padding(iconPadding)
                         .alpha(
                             if (secondsUntilCanRecordAgain.value > 0) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
-                    color = ExpiringSoon
+                    color = MaterialTheme.colorScheme.error
                 )
 
                 // TODO: add link to app in final version
@@ -376,16 +376,12 @@ fun YouDoUTopBar(
 
                 // TODO: multi-window mode
 
-                val iconPadding = 0.dp
-                val iconWidth = 60.dp
-
                 Icon(
                     Icons.Filled.Share,
                     contentDescription = "Share app",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(horizontal = iconPadding)
-                        .width(iconWidth)
                         .clickable {
                             share(
                                 text = text, context = context
@@ -398,7 +394,6 @@ fun YouDoUTopBar(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(horizontal = iconPadding)
-                        .width(iconWidth)
                         .clickable {
                             onClickSettings()
                         })
