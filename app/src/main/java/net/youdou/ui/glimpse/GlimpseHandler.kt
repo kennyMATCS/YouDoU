@@ -7,7 +7,9 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateOffset
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -56,7 +58,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.composed
@@ -73,8 +74,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
@@ -125,6 +126,10 @@ data class DropDownItem(
 
 // TODO: label all animations
 
+// TODO: 9.99/month for extra features from the base tier. things like beta-testing. this should
+//  not be better than base tier in terms of content
+// TODO: sales
+
 // TODO: disable spaces in copy and paste with text field for login
 // TODO: maintain video location after exiting glimpse
 // TODO: don't reset app when orientation changed
@@ -135,10 +140,16 @@ data class DropDownItem(
 // TODO: In Jetpack Compose, you should never pass a MutableState<T> as parameter to other
 //  Composables, as this violates the unidirectional data flow pattern.
 
+// TODO: fix lag in with heart animation
+
+// TODO: FAB Explode Transition for NavHost
+
 // TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
 //  spigot
 
 // TODO: is there a way to stop using mutablestate.value so much?
+
+// TDOO: watermark for videos made. probably can be done through bunny
 
 // TODO: good comments for everything
 
@@ -485,8 +496,25 @@ fun GlimpseCard(
     var isContextMenuVisible = remember { mutableStateOf(false) }
     var contextMenuOffset = remember { mutableStateOf(Offset.Zero) }
 
+    // TODO: better var names
+    var width by remember { mutableIntStateOf(1) }
+    var height by remember { mutableIntStateOf(1) }
+
+    // TODO: better variable names
+    var startX by remember { mutableFloatStateOf(0f) }
+    var startY by remember { mutableFloatStateOf(0f) }
+
     GlimpseCardBase(
         modifier = modifier
+            .onGloballyPositioned {
+                width = max(abs(it.size.width), 1)
+                height = max(abs(it.size.height), 1)
+
+                with(it.boundsInWindow().bottomRight) {
+                    startX = x
+                    startY = y
+                }
+            }
     ) {
         Box {
             YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
@@ -527,14 +555,6 @@ fun GlimpseCard(
                 // TODO: make this constant ?
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
-                // TODO: better variable names
-
-                var width by remember { mutableIntStateOf(1) }
-                var height by remember { mutableIntStateOf(1) }
-
-                var startX by remember { mutableFloatStateOf(0f) }
-                var startY by remember { mutableFloatStateOf(0f) }
-
                 // gray expiration bar and thumbnail
                 Image(
                     painter = painterResource(glimpse.thumbnail),
@@ -550,10 +570,6 @@ fun GlimpseCard(
                                     )
                                 )
                             }
-                        }
-                        .onGloballyPositioned {
-                            width = max(abs(it.size.width), 1)
-                            height = max(abs(it.size.height), 1)
                         }
                         .combinedClickable(true, onClick = {
                             onClickGlimpse(glimpse)
@@ -635,16 +651,51 @@ fun GlimpseCard(
                     }
                 }
 
+                // TODO: ensure this works for different screen sizes. specifically landscape mode
+                //  . sometimes, the hearts are overlapped by the buttons at the bottom of
+                //  GlimpseCard because they are so big.
+
+                // TODO: in entire scaffold view, make sure globally positioning is correct for
+                //  heart startX startY
+
+                // TODO: improve heart spread
+
+                // TODO: make sure we can spam the heart button
+
                 val painter = rememberVectorPainter(Icons.Filled.Favorite)
 
+                val stiffness = 15f
                 val transition = updateTransition(bubbling)
-
                 val offsets = heartTargets.map {
-                    transition.animateOffset { state ->
+                    transition.animateOffset(
+                        transitionSpec = {
+                            spring(
+                                stiffness = stiffness,
+                            )
+                        }
+                    ) { state ->
                         when (state) {
                             HeartState.SHOW -> Offset(it.x, it.y)
                             HeartState.HIDE -> Offset(startX, startY)
                         }
+                    }
+                }
+
+                val opacity by transition.animateFloat(
+                    transitionSpec = { spring(stiffness = stiffness) }
+                ) { state ->
+                    when (state) {
+                        HeartState.SHOW -> 0f
+                        HeartState.HIDE -> 1f
+                    }
+                }
+
+                val scale by transition.animateFloat(
+                    transitionSpec = { spring(stiffness = stiffness) }
+                ) { state ->
+                    when (state) {
+                        HeartState.SHOW -> 2.5f
+                        HeartState.HIDE -> 1.0f
                     }
                 }
 
@@ -656,8 +707,13 @@ fun GlimpseCard(
                             with(offsets[i]) {
                                 translate(value.x, value.y) {
                                     draw(
-                                        painter.intrinsicSize,
-                                        colorFilter = ColorFilter.tint(HeartRed)
+                                        painter.intrinsicSize * scale,
+                                        colorFilter = ColorFilter.tint(
+                                            HeartRed.copy(
+                                                alpha = if (bubbling == HeartState.SHOW) opacity
+                                                else 0f
+                                            )
+                                        ),
                                     )
                                 }
                             }
@@ -716,12 +772,8 @@ fun GlimpseCard(
                                         R.string.yes_hearts_content_description
                                     ), hearts
                                 )
-                            }, tint = tint, modifier = Modifier.onGloballyPositioned {
-                                with(it.positionInRoot()) {
-                                    startX = x
-                                    startY = y
-                                }
-                            })
+                            }, tint = tint, modifier = Modifier
+                        )
 
                         if (hearts > 0) {
                             Text(
@@ -750,19 +802,13 @@ fun GlimpseCard(
 private fun List<Offset>.makeHeartTargets(
     width: Int, height: Int
 ) = map {
-    val xRandom = (width - Random.nextInt(width / 12, width / 2)).toFloat()
-    val yRandom = (height - Random.nextInt(height / 7, height / 2)).toFloat()
+    val xRandom = (Random.nextInt(width / 4, (width - width / 8))).toFloat()
+    val yRandom = (Random.nextInt(height / 2, (height - height / 8))).toFloat()
     Offset(
         xRandom, yRandom
     )
 }
 
-
-private fun List<Offset>.resetHeartTargets(
-    startX: Float, startY: Float
-) = map {
-    Offset(startX, startY)
-}
 
 private fun vibrate(vibrator: Vibrator) {
     // must have equal amount in each array
