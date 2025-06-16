@@ -35,7 +35,7 @@
       </SelectionState>
       <SelectionState runConfigName="PreviewGlimpseCardMedium">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-16T00:04:59.818072228Z">
+        <DropdownSelection timestamp="2025-06-16T15:18:49.242958689Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=15231FDD4000CR" />

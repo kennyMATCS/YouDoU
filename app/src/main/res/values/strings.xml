@@ -77,7 +77,7 @@
     <string name="recording_timeout_notify_title">Timeout notification</string>
     <string name="recording_timeout_notify_message">You are currently timed out from recording a new glimpse.</string>
     <!-- TODO: little settings gear icon to direct people to settings -->
-    <string name="camera_and_audio_required">Camera and or audio permissions are disabled which is required to record glimpses. \n\nPlease enable the respective settings to record a glimpse.</string>
+        <string name="camera_and_audio_required">Camera and or audio permissions are disabled which is required to record glimpses. \n\nPlease enable the respective settings to record a glimpse.</string>
     <string name="recording_timeout_content_description">Timeout notification</string>
     <string name="sign_in_text">Sign in</string>
     <string name="sign_up_text">Sign up</string>

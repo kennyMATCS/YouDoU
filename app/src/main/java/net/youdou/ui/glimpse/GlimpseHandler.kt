@@ -7,12 +7,8 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import androidx.compose.animation.core.animateOffsetAsState
-import androidx.compose.animation.core.keyframesWithSpline
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateOffset
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -60,6 +56,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.composed
@@ -77,7 +74,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
@@ -109,9 +106,7 @@ data class Glimpse(
 )
 
 data class DropDownItem(
-    val text: String,
-    val isError: Boolean,
-    val onItemClick: () -> Unit
+    val text: String, val isError: Boolean, val onItemClick: () -> Unit
 )
 
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
@@ -136,6 +131,9 @@ data class DropDownItem(
 // TODO: remove glimpse after watched
 
 // TODO: Skipped 31 frames!  The application may be doing too much work on its main thread.
+
+// TODO: In Jetpack Compose, you should never pass a MutableState<T> as parameter to other
+//  Composables, as this violates the unidirectional data flow pattern.
 
 // TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
 //  spigot
@@ -229,8 +227,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_1,
         secondsUntilExpiration = R.integer.preview_1_seconds_until_expiration,
         hearts = R.integer.preview_1_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_2_duration,
         thumbnail = R.drawable.preview_2,
         contentDescription = R.string.preview_2_content_description,
@@ -238,8 +235,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_2,
         secondsUntilExpiration = R.integer.preview_2_seconds_until_expiration,
         hearts = R.integer.preview_2_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_3_duration,
         thumbnail = R.drawable.preview_3,
         contentDescription = R.string.preview_3_content_description,
@@ -247,8 +243,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_3,
         secondsUntilExpiration = R.integer.preview_3_seconds_until_expiration,
         hearts = R.integer.preview_3_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_4_duration,
         thumbnail = R.drawable.preview_4,
         contentDescription = R.string.preview_4_content_description,
@@ -256,8 +251,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_4,
         secondsUntilExpiration = R.integer.preview_4_seconds_until_expiration,
         hearts = R.integer.preview_4_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_5_duration,
         thumbnail = R.drawable.preview_5,
         contentDescription = R.string.preview_5_content_description,
@@ -265,8 +259,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_5,
         secondsUntilExpiration = R.integer.preview_5_seconds_until_expiration,
         hearts = R.integer.preview_5_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_6_duration,
         thumbnail = R.drawable.preview_6,
         contentDescription = R.string.preview_6_content_description,
@@ -274,8 +267,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_6,
         secondsUntilExpiration = R.integer.preview_6_seconds_until_expiration,
         hearts = R.integer.preview_6_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_7_duration,
         thumbnail = R.drawable.preview_1,
         contentDescription = R.string.preview_7_content_description,
@@ -283,8 +275,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_7,
         secondsUntilExpiration = R.integer.preview_7_seconds_until_expiration,
         hearts = R.integer.preview_7_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_8_duration,
         thumbnail = R.drawable.preview_8,
         contentDescription = R.string.preview_8_content_description,
@@ -292,8 +283,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_8,
         secondsUntilExpiration = R.integer.preview_8_seconds_until_expiration,
         hearts = R.integer.preview_8_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_9_duration,
         thumbnail = R.drawable.preview_9,
         contentDescription = R.string.preview_9_content_description,
@@ -301,8 +291,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_9,
         secondsUntilExpiration = R.integer.preview_9_seconds_until_expiration,
         hearts = R.integer.preview_9_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_10_duration,
         thumbnail = R.drawable.preview_10,
         contentDescription = R.string.preview_10_content_description,
@@ -310,8 +299,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_10,
         secondsUntilExpiration = R.integer.preview_10_seconds_until_expiration,
         hearts = R.integer.preview_10_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_11_duration,
         thumbnail = R.drawable.preview_11,
         contentDescription = R.string.preview_11_content_description,
@@ -319,8 +307,7 @@ var previewGlimpses = listOf(
         video = R.raw.preview_11,
         secondsUntilExpiration = R.integer.preview_11_seconds_until_expiration,
         hearts = R.integer.preview_11_hearts,
-    ),
-    Glimpse(
+    ), Glimpse(
         duration = R.integer.preview_12_duration,
         thumbnail = R.drawable.preview_12,
         contentDescription = R.string.preview_12_content_description,
@@ -361,13 +348,16 @@ var previewGlimpses = listOf(
 // TODO: maybe only accept api calls for local app events if they are valid, i.e. times match up
 //  from server-side by what client is asking
 
+// TODO: clean up all variables
+
 // TODO: ability to tap to focus with camera
 
 @Composable
 fun GlimpseGrid(
-    modifier: Modifier, glimpses: MutableList<Glimpse>, contentPadding: PaddingValues,
-    onClickGlimpse:
-        (Glimpse) -> Unit,
+    modifier: Modifier,
+    glimpses: MutableList<Glimpse>,
+    contentPadding: PaddingValues,
+    onClickGlimpse: (Glimpse) -> Unit,
     isPremium: Boolean
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -419,8 +409,7 @@ fun GlimpseGrid(
                 onRemoveGlimpse = { glimpse ->
                     // TODO: glimpses expiring
                     // glimpses.remove(glimpse)
-                }
-            )
+                })
         }
         if (!isPremium) {
             item {
@@ -459,7 +448,8 @@ fun GlimpsePurchaseCard(
                 .padding(4.dp)
                 .clip(MaterialTheme.shapes.large)
                 .dashedBorder(
-                    strokeWidth = 7.dp, color = MaterialTheme.colorScheme.outline,
+                    strokeWidth = 7.dp,
+                    color = MaterialTheme.colorScheme.outline,
                     cornerRadiusDp = cornerRadiusDp
                 )
                 .clickable {
@@ -498,11 +488,6 @@ fun GlimpseCard(
     GlimpseCardBase(
         modifier = modifier
     ) {
-        // TODO: clean up these variables
-        var heartOffsets: List<Offset>? = null
-        // TODO: what if screen size changes? will these states be okay?
-        var heartPositioned by remember { mutableStateOf(false) }
-
         Box {
             YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
         }
@@ -525,20 +510,19 @@ fun GlimpseCard(
                 val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
-                val expirationColor =
-                    if (!isSystemInDarkTheme()) {
-                        when {
-                            expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
-                            expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
-                            else -> MaterialTheme.colorScheme.error
-                        }
-                    } else {
-                        when {
-                            expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
-                            expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
-                            else -> MaterialTheme.colorScheme.error
-                        }
+                val expirationColor = if (!isSystemInDarkTheme()) {
+                    when {
+                        expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
+                        expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.error
                     }
+                } else {
+                    when {
+                        expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
+                        expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.error
+                    }
+                }
 
                 // TODO: make this constant ?
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
@@ -561,10 +545,8 @@ fun GlimpseCard(
                             drawContent()
                             if (expirationSeconds < mediumSeconds) {
                                 drawRect(
-                                    color = Color(0, 0, 0, 125),
-                                    size = Size(
-                                        size.width - (size.width * heightFactor), size
-                                            .height
+                                    color = Color(0, 0, 0, 125), size = Size(
+                                        size.width - (size.width * heightFactor), size.height
                                     )
                                 )
                             }
@@ -573,15 +555,11 @@ fun GlimpseCard(
                             width = max(abs(it.size.width), 1)
                             height = max(abs(it.size.height), 1)
                         }
-                        .combinedClickable(
-                            true,
-                            onClick = {
-                                onClickGlimpse(glimpse)
-                            },
-                            onLongClick = {
-                                isContextMenuVisible.value = true
-                            }
-                        )
+                        .combinedClickable(true, onClick = {
+                            onClickGlimpse(glimpse)
+                        }, onLongClick = {
+                            isContextMenuVisible.value = true
+                        })
                         .pointerInteropFilter {
                             contextMenuOffset.value = Offset(it.x, it.y)
                             false
@@ -606,8 +584,7 @@ fun GlimpseCard(
                         .align(Alignment.BottomStart)
                 ) {
                     Text(
-                        fontWeight = if (expirationSeconds < mediumSeconds) FontWeight.Bold else
-                            FontWeight.Normal,
+                        fontWeight = if (expirationSeconds < mediumSeconds) FontWeight.Bold else FontWeight.Normal,
                         text = expirationSeconds.formatTimeSeconds(),
                         style = textStyle,
                         color = expirationColor,
@@ -624,87 +601,64 @@ fun GlimpseCard(
                 val context = LocalContext.current
                 val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     val vibratorManager = context.getSystemService(
-                        Context
-                            .VIBRATOR_MANAGER_SERVICE
+                        Context.VIBRATOR_MANAGER_SERVICE
                     ) as VibratorManager
                     vibratorManager.defaultVibrator
                 } else {
-                    @Suppress("DEPRECATION")
-                    context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
 
                 // TODO: test bubbling on different display sizes
 
                 // hearts
-                val bubbling = remember { mutableStateOf(HeartState.HIDE) }
+                var bubbling by remember { mutableStateOf(HeartState.HIDE) }
                 val heartShownDuration = integerResource(R.integer.heart_shown_duration)
                 val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
 
-                LaunchedEffect(bubbling.value) {
-                    if (bubbling.value == HeartState.SHOW) {
-                        heartOffsets = makeHeartOffsets(
-                            heartRepeatAmount = heartRepeatAmount,
-                            width = width,
-                            height = height
-                        )
+                var heartTargets by remember {
+                    mutableStateOf(
+                        List(heartRepeatAmount) {
+                            Offset(startX, startY)
+                        }
+                    )
+                }
+
+                LaunchedEffect(bubbling) {
+                    if (bubbling == HeartState.SHOW) {
+                        heartTargets = heartTargets.makeHeartTargets(width, height)
 
                         // DELAY
                         delay(heartShownDuration.toLong())
                         // DELAY
 
-                        bubbling.value = HeartState.HIDE
-                        heartOffsets = resetHeartOffsets(
-                            heartRepeatAmount = heartRepeatAmount,
-                            startX = startX,
-                            startY = startY
-                        )
+                        bubbling = HeartState.HIDE
                     }
                 }
 
+                val painter = rememberVectorPainter(Icons.Filled.Favorite)
 
-                // TODO: don't call me twice, reuse this function "resetHeartOffsets"
-                LaunchedEffect(heartPositioned) {
-                    heartOffsets = resetHeartOffsets(
-                        heartRepeatAmount = heartRepeatAmount,
-                        startX = startX,
-                        startY = startY
-                    )
+                val transition = updateTransition(bubbling)
+
+                val offsets = heartTargets.map {
+                    transition.animateOffset { state ->
+                        when (state) {
+                            HeartState.SHOW -> Offset(it.x, it.y)
+                            HeartState.HIDE -> Offset(startX, startY)
+                        }
+                    }
                 }
 
-                // TODO: make sure u can spam hearts safely
-                // Workaround for BoxScope
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = bubbling.value == HeartState.SHOW,
-                    enter = fadeIn(tween(1000)), // TODO: tween variable
-                    exit = fadeOut(tween(1000)),
+                Canvas(
+                    modifier = Modifier
                 ) {
-                    // TODO: make sure this null assignment is safe
-
-                    heartOffsets?.let {
-                        val offsetAnimations = List(heartRepeatAmount) { i ->
-                            val offsetAnimation by
-                            animateOffsetAsState(
-                                targetValue = heartOffsets[i],
-                            )
-                            mutableStateOf(offsetAnimation)
-                        }
-
-                        val painter = rememberVectorPainter(Icons.Filled.Favorite)
-                        Canvas(
-                            modifier = Modifier
-                        ) {
-                            repeat(heartRepeatAmount) { i ->
-                                val offset = offsetAnimations[i]
-
-                                with(painter) {
-                                    translate(offset.value.x, offset.value.y) {
-                                        println("${offset.value}")
-                                        draw(
-                                            painter.intrinsicSize,
-                                            colorFilter = ColorFilter.tint
-                                                (HeartRed)
-                                        )
-                                    }
+                    with(painter) {
+                        repeat(heartRepeatAmount) { i ->
+                            with(offsets[i]) {
+                                translate(value.x, value.y) {
+                                    draw(
+                                        painter.intrinsicSize,
+                                        colorFilter = ColorFilter.tint(HeartRed)
+                                    )
                                 }
                             }
                         }
@@ -718,12 +672,11 @@ fun GlimpseCard(
                         .clickable {
                             hearts++
 
-                            bubbling.value = HeartState.SHOW
+                            bubbling = HeartState.SHOW
 
                             vibrate(vibrator)
                         }
-                        .align(Alignment.BottomEnd)
-                ) {
+                        .align(Alignment.BottomEnd)) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -740,8 +693,7 @@ fun GlimpseCard(
                         when (hearts) {
                             0 -> {
                                 icon = ImageVector.vectorResource(
-                                    R.drawable
-                                        .outline_favorite
+                                    R.drawable.outline_favorite
                                 )
                                 tint = MaterialTheme.colorScheme.onSurface
                             }
@@ -754,11 +706,9 @@ fun GlimpseCard(
                         }
 
                         Icon(
-                            imageVector = icon,
-                            contentDescription = if (hearts == 0) {
+                            imageVector = icon, contentDescription = if (hearts == 0) {
                                 stringResource(
-                                    R.string
-                                        .no_hearts_content_description
+                                    R.string.no_hearts_content_description
                                 )
                             } else {
                                 String.format(
@@ -766,17 +716,12 @@ fun GlimpseCard(
                                         R.string.yes_hearts_content_description
                                     ), hearts
                                 )
-                            },
-                            tint = tint,
-                            modifier = Modifier
-                                .onGloballyPositioned {
-                                    heartPositioned = true
-                                    with(it.positionInParent()) {
-                                        startX = x
-                                        startY = y
-                                    }
+                            }, tint = tint, modifier = Modifier.onGloballyPositioned {
+                                with(it.positionInRoot()) {
+                                    startX = x
+                                    startY = y
                                 }
-                        )
+                            })
 
                         if (hearts > 0) {
                             Text(
@@ -801,20 +746,23 @@ fun GlimpseCard(
     }
 }
 
-private fun makeHeartOffsets(heartRepeatAmount: Int, width: Int, height: Int) =
-    // TODO: constants for these randoms?
-    List(heartRepeatAmount) {
-        val xRandom = (width - Random.nextInt(width / 12, width / 2)).toFloat()
-        val yRandom = (height - Random.nextInt(height / 7, height / 2)).toFloat()
-        Offset(
-            xRandom, yRandom
-        )
-    }
+// TODO: constants for these randoms?
+private fun List<Offset>.makeHeartTargets(
+    width: Int, height: Int
+) = map {
+    val xRandom = (width - Random.nextInt(width / 12, width / 2)).toFloat()
+    val yRandom = (height - Random.nextInt(height / 7, height / 2)).toFloat()
+    Offset(
+        xRandom, yRandom
+    )
+}
 
-private fun resetHeartOffsets(heartRepeatAmount: Int, startX: Float, startY: Float) =
-    List(heartRepeatAmount) {
-        Offset(startX, startY)
-    }
+
+private fun List<Offset>.resetHeartTargets(
+    startX: Float, startY: Float
+) = map {
+    Offset(startX, startY)
+}
 
 private fun vibrate(vibrator: Vibrator) {
     // must have equal amount in each array
@@ -842,8 +790,7 @@ fun YouDoUDropDown(
     val density = LocalDensity.current
     val dpOffset = with(density) {
         DpOffset(
-            contextMenuOffset.value.x.toDp(), contextMenuOffset
-                .value.y.toDp()
+            contextMenuOffset.value.x.toDp(), contextMenuOffset.value.y.toDp()
         )
     }
 
@@ -859,37 +806,30 @@ fun YouDoUDropDown(
         shape = MaterialTheme.shapes.small
     ) {
         dropDownItems.forEach {
-            DropdownMenuItem(
-                onClick = {
-                    it.onItemClick()
-                    isContextMenuVisible.value = false
-                },
-                text = {
-                    Text(
-                        text = it.text.replace(
-                            GLIMPSE_DURATION_SPECIFIER,
-                            integerResource(glimpse.duration).toLong().formatTimeSeconds
-                                (appendZero = false)
-                        ),
-                        color = if (it.isError) MaterialTheme.colorScheme.error else
-                            MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            )
+            DropdownMenuItem(onClick = {
+                it.onItemClick()
+                isContextMenuVisible.value = false
+            }, text = {
+                Text(
+                    text = it.text.replace(
+                        GLIMPSE_DURATION_SPECIFIER,
+                        integerResource(glimpse.duration).toLong()
+                            .formatTimeSeconds(appendZero = false)
+                    ),
+                    color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            })
         }
     }
 }
 
 enum class HeartState {
-    SHOW,
-    HIDE
+    SHOW, HIDE
 }
 
 enum class DetailPaneBreakpoint {
-    COMPACT,
-    MEDIUM,
-    EXPANDED
+    COMPACT, MEDIUM, EXPANDED
 }
 
 // TODO: fix this guy right here
@@ -908,15 +848,11 @@ private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp:
                     )
 
                     drawRoundRect(
-                        color = color,
-                        style = stroke,
-                        cornerRadius = CornerRadius(cornerRadiusPx)
+                        color = color, style = stroke, cornerRadius = CornerRadius(cornerRadiusPx)
                     )
                 }
-            }
-        )
-    }
-)
+            })
+    })
 
 // TODO: where should this go? should it be in a Util class? or do we just leave it here? other
 //  classes are referencing this which is why im asking
@@ -926,23 +862,20 @@ fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
             if (hours > 1) {
                 append(
                     String.format(
-                        Locale.US,
-                        "%d hours", hours
+                        Locale.US, "%d hours", hours
                     )
                 )
             } else if (hours == 1L) {
                 append(
                     String.format(
-                        Locale.US,
-                        "%d hour", hours
+                        Locale.US, "%d hour", hours
                     )
                 )
             } else {
                 val specifier = if (appendZero) "%02d:%02d" else "%d:%02d"
                 append(
                     String.format(
-                        Locale.US,
-                        specifier, minutes, seconds
+                        Locale.US, specifier, minutes, seconds
                     )
                 )
             }
@@ -953,12 +886,9 @@ fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
 fun Int.getUri(context: Context): Uri {
     val item = this
     return with(context.resources) {
-        Uri.Builder()
-            .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-            .authority(getResourcePackageName(item))
-            .appendPath(getResourceTypeName(item))
-            .appendPath(getResourceEntryName(item))
-            .build()
+        Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+            .authority(getResourcePackageName(item)).appendPath(getResourceTypeName(item))
+            .appendPath(getResourceEntryName(item)).build()
     }
 }
 
