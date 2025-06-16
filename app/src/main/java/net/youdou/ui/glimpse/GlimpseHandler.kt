@@ -7,6 +7,13 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.keyframesWithSpline
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
@@ -60,11 +68,16 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
@@ -79,6 +92,9 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import net.youdou.ui.theme.HeartRed
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 @Serializable
@@ -105,17 +121,70 @@ data class DropDownItem(
 
 // TODO: report feature done
 
+// TODO: have a way to see how many times you hearted a glimpse. should you be able to heart more
+//  than
+//  once? i think so
+
+// TODO: have a way for users to see how many times people liked and viewed their glimpse. this
+//  is VERY IMPORTANT
+
+// TODO: label all animations
+
 // TODO: disable spaces in copy and paste with text field for login
 // TODO: maintain video location after exiting glimpse
 // TODO: don't reset app when orientation changed
 // TODO: remove glimpse after watched
+
+// TODO: Skipped 31 frames!  The application may be doing too much work on its main thread.
 
 // TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
 //  spigot
 
 // TODO: is there a way to stop using mutablestate.value so much?
 
+// TODO: good comments for everything
+
+// TODO; report stack traces from crashes
+
+// TODO: control where videos are stored for app. ensure they can be easily accessed for the user
+//  . maybe have a setting to pick where they are stored. also, check android settings and make
+//  sure videos don't fall under the "cache" category.
+// Package cx.youdou does not have legacy storage error
+
 // TODO: check all strings. See if they make sense
+
+// TODO: Unable to configure camera Camera@7759467[id=1]
+// java.util.concurrent.TimeoutException: Future[androidx.camera.core.impl.utils.futures
+// .ListFuture@57472ca] is not done within 5000 ms.
+//    at androidx.camera.core.impl.utils.futures.Futures.lambda$makeTimeoutFuture$1(Futures.java:427)
+//    at androidx.camera.core.impl.utils.futures.Futures$$ExternalSyntheticLambda7.call(D8$$SyntheticClass:0)
+//    at androidx.camera.core.impl.utils.executor.HandlerScheduledExecutorService$HandlerScheduledFuture.run(HandlerScheduledExecutorService.java:240)
+//    at android.os.Handler.handleCallback(Handler.java:958)
+//    at android.os.Handler.dispatchMessage(Handler.java:99)
+//    at android.os.Looper.loopOnce(Looper.java:205)
+//    at android.os.Looper.loop(Looper.java:294)
+//    at android.os.HandlerThread.run(HandlerThread.java:67)
+
+// TODO:
+//Exception thrown during dispatchAppVisibility Window{517e2ac u0 cx.youdou/net.youdou.MainActivity
+//        EXITING}
+//android.os.DeadObjectException
+//at android.os.BinderProxy.transactNative(Native Method)
+//at android.os.BinderProxy.transact(BinderProxy.java:584)
+//at android.view.IWindow$Stub$Proxy.dispatchAppVisibility(IWindow.java:546)
+//at com.android.server.wm.WindowState.sendAppVisibilityToClients(WindowState.java:3271)
+//at com.android.server.wm.WindowContainer.sendAppVisibilityToClients(WindowContainer.java:1221)
+//at com.android.server.wm.WindowToken.setClientVisible(WindowToken.java:409)
+//at com.android.server.wm.ActivityRecord.setClientVisible(ActivityRecord.java:6946)
+//at com.android.server.wm.ActivityRecord.postApplyAnimation(ActivityRecord.java:5637)
+//at com.android.server.wm.ActivityRecord.commitVisibility(ActivityRecord.java:5580)
+//at com.android.server.wm.Transition.finishTransition(Transition.java:1151)
+//at com.android.server.wm.TransitionController.finishTransition(TransitionController.java:875)
+//at com.android.server.wm.WindowOrganizerController.finishTransition(WindowOrganizerController.java:396)
+//at android.window.IWindowOrganizerController$Stub.onTransact(IWindowOrganizerController.java:286)
+//at com.android.server.wm.WindowOrganizerController.onTransact(WindowOrganizerController.java:181)
+//at android.os.Binder.execTransactInternal(Binder.java:1339)
+//at android.os.Binder.execTransact(Binder.java:1275)
 
 // TODO: better login form error messages. model from Cloudflare login
 // TODO: clean up login form, specifically the labels for text fields
@@ -134,7 +203,6 @@ data class DropDownItem(
 
 // TODO: improve record glimpse UI
 // TODO: redo button shadows and length
-// TODO: add record duration in top right of record UI
 
 // TODO: better accessibility content descriptions
 // TODO: big plus button in empty glimpse at the bottom so people have a way to purchase premium
@@ -280,6 +348,8 @@ var previewGlimpses = listOf(
 // TODO: make code look better, clean it up! more functions!
 // TODO: we should not get lost in the code!
 // TODO: we have lots of mutable states and if statements. see if we can clean them up
+
+// TODO: lots of launch effects. anyway to trim that up?
 
 // TODO: if we have more functions, we can have better names for stuff which means more readable
 //  code
@@ -428,6 +498,11 @@ fun GlimpseCard(
     GlimpseCardBase(
         modifier = modifier
     ) {
+        // TODO: clean up these variables
+        var heartOffsets: List<Offset>? = null
+        // TODO: what if screen size changes? will these states be okay?
+        var heartPositioned by remember { mutableStateOf(false) }
+
         Box {
             YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
         }
@@ -465,9 +540,18 @@ fun GlimpseCard(
                         }
                     }
 
+                // TODO: make this constant ?
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
-                // gray expiration bar and thumnbail
+                // TODO: better variable names
+
+                var width by remember { mutableIntStateOf(1) }
+                var height by remember { mutableIntStateOf(1) }
+
+                var startX by remember { mutableFloatStateOf(0f) }
+                var startY by remember { mutableFloatStateOf(0f) }
+
+                // gray expiration bar and thumbnail
                 Image(
                     painter = painterResource(glimpse.thumbnail),
                     contentDescription = stringResource(glimpse.contentDescription),
@@ -484,6 +568,10 @@ fun GlimpseCard(
                                     )
                                 )
                             }
+                        }
+                        .onGloballyPositioned {
+                            width = max(abs(it.size.width), 1)
+                            height = max(abs(it.size.height), 1)
                         }
                         .combinedClickable(
                             true,
@@ -545,12 +633,92 @@ fun GlimpseCard(
                     context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
 
+                // TODO: test bubbling on different display sizes
+
+                // hearts
+                val bubbling = remember { mutableStateOf(HeartState.HIDE) }
+                val heartShownDuration = integerResource(R.integer.heart_shown_duration)
+                val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
+
+                LaunchedEffect(bubbling.value) {
+                    if (bubbling.value == HeartState.SHOW) {
+                        heartOffsets = makeHeartOffsets(
+                            heartRepeatAmount = heartRepeatAmount,
+                            width = width,
+                            height = height
+                        )
+
+                        // DELAY
+                        delay(heartShownDuration.toLong())
+                        // DELAY
+
+                        bubbling.value = HeartState.HIDE
+                        heartOffsets = resetHeartOffsets(
+                            heartRepeatAmount = heartRepeatAmount,
+                            startX = startX,
+                            startY = startY
+                        )
+                    }
+                }
+
+
+                // TODO: don't call me twice, reuse this function "resetHeartOffsets"
+                LaunchedEffect(heartPositioned) {
+                    heartOffsets = resetHeartOffsets(
+                        heartRepeatAmount = heartRepeatAmount,
+                        startX = startX,
+                        startY = startY
+                    )
+                }
+
+                // TODO: make sure u can spam hearts safely
+                // Workaround for BoxScope
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = bubbling.value == HeartState.SHOW,
+                    enter = fadeIn(tween(1000)), // TODO: tween variable
+                    exit = fadeOut(tween(1000)),
+                ) {
+                    // TODO: make sure this null assignment is safe
+
+                    heartOffsets?.let {
+                        val offsetAnimations = List(heartRepeatAmount) { i ->
+                            val offsetAnimation by
+                            animateOffsetAsState(
+                                targetValue = heartOffsets[i],
+                            )
+                            mutableStateOf(offsetAnimation)
+                        }
+
+                        val painter = rememberVectorPainter(Icons.Filled.Favorite)
+                        Canvas(
+                            modifier = Modifier
+                        ) {
+                            repeat(heartRepeatAmount) { i ->
+                                val offset = offsetAnimations[i]
+
+                                with(painter) {
+                                    translate(offset.value.x, offset.value.y) {
+                                        println("${offset.value}")
+                                        draw(
+                                            painter.intrinsicSize,
+                                            colorFilter = ColorFilter.tint
+                                                (HeartRed)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // hearts
                 Box(
                     modifier = Modifier
                         .clip(behindShape)
                         .clickable {
                             hearts++
+
+                            bubbling.value = HeartState.SHOW
 
                             vibrate(vibrator)
                         }
@@ -600,6 +768,14 @@ fun GlimpseCard(
                                 )
                             },
                             tint = tint,
+                            modifier = Modifier
+                                .onGloballyPositioned {
+                                    heartPositioned = true
+                                    with(it.positionInParent()) {
+                                        startX = x
+                                        startY = y
+                                    }
+                                }
                         )
 
                         if (hearts > 0) {
@@ -625,10 +801,24 @@ fun GlimpseCard(
     }
 }
 
+private fun makeHeartOffsets(heartRepeatAmount: Int, width: Int, height: Int) =
+    // TODO: constants for these randoms?
+    List(heartRepeatAmount) {
+        val xRandom = (width - Random.nextInt(width / 12, width / 2)).toFloat()
+        val yRandom = (height - Random.nextInt(height / 7, height / 2)).toFloat()
+        Offset(
+            xRandom, yRandom
+        )
+    }
+
+private fun resetHeartOffsets(heartRepeatAmount: Int, startX: Float, startY: Float) =
+    List(heartRepeatAmount) {
+        Offset(startX, startY)
+    }
+
 private fun vibrate(vibrator: Vibrator) {
     // must have equal amount in each array
     // TODO: unit test to ensure array have equal length?
-    // TODO: constants for this? it + 10
     val timings: LongArray = longArrayOf(
         35, 35, 60, 35, 35, 35, 35, 35, 35, 35, 35, 35
     )
@@ -691,12 +881,18 @@ fun YouDoUDropDown(
     }
 }
 
+enum class HeartState {
+    SHOW,
+    HIDE
+}
+
 enum class DetailPaneBreakpoint {
     COMPACT,
     MEDIUM,
     EXPANDED
 }
 
+// TODO: fix this guy right here
 private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp: Dp) = composed(
     factory = {
         val density = LocalDensity.current
@@ -731,14 +927,14 @@ fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
                 append(
                     String.format(
                         Locale.US,
-                        "%2d hours", hours
+                        "%d hours", hours
                     )
                 )
             } else if (hours == 1L) {
                 append(
                     String.format(
                         Locale.US,
-                        "%2d hour", hours
+                        "%d hour", hours
                     )
                 )
             } else {
