@@ -7,9 +7,12 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateOffset
+import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -140,6 +144,9 @@ data class DropDownItem(
 
 // TODO: In Jetpack Compose, you should never pass a MutableState<T> as parameter to other
 //  Composables, as this violates the unidirectional data flow pattern.
+// TODO: what is unidirectional data flow pattern?
+// TODO: "Utility" class to mange all the callbacks. That way, we don't need to pass as many
+//  arguments down to child composables
 
 // TODO: fix lag in with heart animation
 
@@ -153,6 +160,8 @@ data class DropDownItem(
 // TDOO: watermark for videos made. probably can be done through bunny
 
 // TODO: good comments for everything
+
+// TODO: pay attention to heart spam. if that animation triggers a lot it might be annoying
 
 // TODO; report stack traces from crashes
 
@@ -220,8 +229,17 @@ data class DropDownItem(
 // TODO: one purchasable thing only: premium!
 // TODO: make popup to show benefits of premium. this could be a nice pop-up composable in the
 //  middle of the screen
+// TODO: i later decided that there should be two purchasable things. except premium+ would not
+//  provide any in app advantages to premium, maybe just something for avid supporters of the app
+//  . could have beta testing
 
 // TODO: find a way to reduce minsdk. all people should be able to use the app :)
+
+// TODO: more powerful api server for constant requests. specifically, sending heart count update
+//  and video removed updates
+
+// TODO: shake animation for ui. login and heart updates
+// https://www.sinasamaki.com/shake-animations-compose/
 
 const val GLIMPSE_DURATION_SPECIFIER = "%glimpse_duration"
 
@@ -445,7 +463,7 @@ private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit
     }
 }
 
-// TODO: clickable purchase card that prompts to store
+// TODO: clickable purchase card that prompts to buy composable with premium and premium+
 @Composable
 fun GlimpsePurchaseCard(
     modifier: Modifier,
@@ -503,7 +521,34 @@ fun GlimpseCard(
 
     // TODO: better variable names
     var startOffset by remember { mutableStateOf(Offset.Zero) }
-    var bubbling by remember { mutableStateOf(HeartState.HIDE) }
+    var bubbling by remember { mutableStateOf(HeartState.END) }
+    var explode by remember { mutableStateOf(false) }
+    val transition = updateTransition(explode)
+    val shakeTransition = updateTransition(bubbling)
+
+    // TODO: setting to disable vibrate shake
+    // TODO: setting to disable visual shake
+
+    // TODO: make this into a callback
+    var left = true
+    val shake = 1.5f
+    val cardShake by shakeTransition.animateOffset(
+        transitionSpec = {
+            repeatable(
+                iterations = 15,
+                animation = tween(durationMillis = 20),
+                repeatMode = RepeatMode.Reverse
+            )
+        }
+    ) { state ->
+        when(state) {
+            HeartState.BEGIN -> {
+                left = !left
+                if (left) Offset(-shake, -shake) else Offset(shake, shake)
+            }
+            HeartState.END -> Offset(0f, 0f)
+        }
+    }
 
     GlimpseCardBase(
         modifier = modifier
@@ -511,6 +556,7 @@ fun GlimpseCard(
                 width = max(abs(it.size.width), 1)
                 height = max(abs(it.size.height), 1)
             }
+            .offset(x = cardShake.x.dp, y = cardShake.y.dp)
     ) {
         Box {
             YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
@@ -625,11 +671,23 @@ fun GlimpseCard(
                     modifier = Modifier
                         .clip(behindShape)
                         .clickable {
-                            hearts++
+                            if (!transition.isRunning) {
+                                hearts++
 
-                            bubbling = HeartState.SHOW
+                                bubbling = HeartState.BEGIN
 
-                            vibrate(vibrator)
+                                // TODO: open heart composable right here, the current behavior
+                                //  in this if statement should have through that composable instead
+
+                                // TODO: ensure that when that heart composable is open. no heart
+                                //  animations can be send to prioritize that user get a heart
+                                //  animation sent
+
+                                // TODO: show other live heart updates somehow. we can use a heart
+                                //  animation callback
+
+                                vibrate(vibrator)
+                            }
                         }
                         .align(Alignment.BottomEnd)
                         .onGloballyPositioned {
@@ -704,6 +762,7 @@ fun GlimpseCard(
 
         // hearts
         val heartShownDuration = integerResource(R.integer.heart_shown_duration)
+        val heartBeforeExplosionDuration = integerResource(R.integer.heart_duration_before_explosion)
         val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
 
         var heartTargets by remember {
@@ -715,17 +774,28 @@ fun GlimpseCard(
         }
 
         val stiffness = 10f
-        val transition = updateTransition(bubbling)
 
         LaunchedEffect(bubbling) {
-            if (bubbling == HeartState.SHOW) {
-                heartTargets = heartTargets.makeHeartTargets(width, height)
+            if (bubbling == HeartState.BEGIN) {
+                // DELAY
+                delay(heartBeforeExplosionDuration.toLong())
+                // DELAY
 
+                explode = true
+                heartTargets = heartTargets.makeHeartTargets(width, height)
+                bubbling = HeartState.END
+            }
+        }
+
+        // these happen in succession
+
+        LaunchedEffect(explode) {
+            if (explode == true) {
                 // DELAY
                 delay(heartShownDuration.toLong())
                 // DELAY
 
-                bubbling = HeartState.HIDE
+                explode = false
             }
         }
 
@@ -742,8 +812,8 @@ fun GlimpseCard(
                 }
             ) { state ->
                 when (state) {
-                    HeartState.SHOW -> Offset(it.x, it.y)
-                    HeartState.HIDE -> startOffset
+                    true -> Offset(it.x, it.y)
+                    false -> startOffset
                 }
             }
         }
@@ -752,8 +822,8 @@ fun GlimpseCard(
             transitionSpec = { spring(stiffness = stiffness) }
         ) { state ->
             when (state) {
-                HeartState.SHOW -> 0f
-                HeartState.HIDE -> 1f
+                true -> 0f
+                false -> 1f
             }
         }
 
@@ -761,8 +831,8 @@ fun GlimpseCard(
             transitionSpec = { spring(stiffness = stiffness) }
         ) { state ->
             when (state) {
-                HeartState.SHOW -> 2.5f
-                HeartState.HIDE -> 1.0f
+                true -> 2.5f
+                false -> 1.0f
             }
         }
 
@@ -772,13 +842,12 @@ fun GlimpseCard(
             with(painter) {
                 repeat(heartRepeatAmount) { i ->
                     with(offsets[i]) {
-                        println("${transition.targetState} ${transition.isRunning} ${transition.isSeeking}")
                         translate(value.x, value.y) {
                             draw(
                                 painter.intrinsicSize * scale,
                                 colorFilter = ColorFilter.tint(
                                     HeartRed.copy(
-                                        alpha = if (bubbling == HeartState.SHOW) opacity else 0f
+                                        alpha = if (explode == true) opacity else 0f
                                     )
                                 ),
                             )
@@ -801,17 +870,26 @@ private fun List<Offset>.makeHeartTargets(
     )
 }
 
-
+// TODO: hold vibration then EXPLODE! sync this with hearts
 private fun vibrate(vibrator: Vibrator) {
     // must have equal amount in each array
     // TODO: unit test to ensure array have equal length?
+
+    val intensity = 3
+    val spread = 1
+
+    // TODO: find way to ensure same size, maybe we could just make a pairing data class
     val timings: LongArray = longArrayOf(
-        35, 35, 60, 35, 35, 35, 35, 35, 35, 35, 35, 35
-    )
+        35, 35, 35, 60, 35, 35, 35, 35, 60, 35, 35, 35, 60, 35, 35, 35, 35, 35, 35, 35, 35, 35
+    ).map {
+        it * spread
+    }.toLongArray()
 
     val amplitudes: IntArray = intArrayOf(
-        12, 25, 26, 28, 30, 33, 34, 35, 30, 25, 19, 12,
-    )
+        10, 15, 10, 15, 10, 15, 10, 15, 10, 15, 10, 15, 26, 35, 42, 41, 38, 35, 30, 25, 19, 12,
+    ).map {
+        it * intensity
+    }.toIntArray()
 
     val repeatIndex = -1 // Do not repeat.
 
@@ -863,7 +941,7 @@ fun YouDoUDropDown(
 }
 
 enum class HeartState {
-    SHOW, HIDE
+    BEGIN, END
 }
 
 enum class DetailPaneBreakpoint {
@@ -871,6 +949,8 @@ enum class DetailPaneBreakpoint {
 }
 
 // TODO: fix this guy right here
+// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
+//  classes are referencing this which is why im asking
 private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp: Dp) = composed(
     factory = {
         val density = LocalDensity.current
@@ -921,6 +1001,8 @@ fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
     }
 }
 
+// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
+//  classes are referencing this which is why im asking
 fun Int.getUri(context: Context): Uri {
     val item = this
     return with(context.resources) {
@@ -975,6 +1057,7 @@ fun PreviewGlimpsePurchaseCard() {
     GlimpsePurchaseCard(modifier = Modifier)
 }
 
+// TODO: no supressions!
 @Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
 @Preview
 @Composable
