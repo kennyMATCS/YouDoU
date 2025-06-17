@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateOffset
@@ -14,6 +15,10 @@ import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,6 +36,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -113,6 +119,8 @@ data class DropDownItem(
 )
 
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
+// TODO: the heart count could update in sync with the shake so we aren't spamming updates on screen
+// TODO: we could also just not shake unless the user is doing it themselves
 
 // TODO: 2 new hearts on the time of buying basic membership. add hearts to all accounts every 24
 //  hours
@@ -164,6 +172,8 @@ data class DropDownItem(
 // TODO: pay attention to heart spam. if that animation triggers a lot it might be annoying
 
 // TODO; report stack traces from crashes
+
+// TODO: go through logcat and just look for issues we should watch out for
 
 // TODO: control where videos are stored for app. ensure they can be easily accessed for the user
 //  . maybe have a setting to pick where they are stored. also, check android settings and make
@@ -455,8 +465,8 @@ private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
             .padding(8.dp),
-        shadowElevation = 5.dp,
-        tonalElevation = 5.dp,
+        shadowElevation = 4.dp,
+        tonalElevation = 4.dp,
         shape = MaterialTheme.shapes.large,
     ) {
         content()
@@ -528,8 +538,11 @@ fun GlimpseCard(
 
     // TODO: setting to disable vibrate shake
     // TODO: setting to disable visual shake
+    // TODO: setting to disable live heart explosion updates
 
     // TODO: make this into a callback
+    // TODO: make everything into a callback!
+
     var left = true
     val shake = 1.5f
     val cardShake by shakeTransition.animateOffset(
@@ -541,11 +554,12 @@ fun GlimpseCard(
             )
         }
     ) { state ->
-        when(state) {
+        when (state) {
             HeartState.BEGIN -> {
                 left = !left
                 if (left) Offset(-shake, -shake) else Offset(shake, shake)
             }
+
             HeartState.END -> Offset(0f, 0f)
         }
     }
@@ -693,6 +707,8 @@ fun GlimpseCard(
                         .onGloballyPositioned {
                             // startOffset = it.positionInRoot()
                         }) {
+
+                    // TODO: animate width increase
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -737,11 +753,35 @@ fun GlimpseCard(
                             tint = tint, modifier = Modifier,
                         )
 
+                        // TODO: we gotta test this
                         if (hearts > 0) {
-                            Text(
-                                text = hearts.toString(),
-                                style = textStyle,
-                            )
+                            hearts.toString()
+                                .mapIndexed { index, c -> Digit(c, hearts, index) }
+                                .forEachIndexed { i, digit ->
+                                    AnimatedContent(
+                                        targetState = digit,
+                                        transitionSpec = {
+                                            if (targetState > initialState) {
+                                                slideInVertically { -it } togetherWith slideOutVertically { it }
+                                            } else {
+                                                slideInVertically { it } togetherWith slideOutVertically { -it }
+                                            }
+                                        }
+                                    ) { digit ->
+                                        Text(
+                                            text = "${digit.digitChar}",
+                                            style = textStyle,
+                                            // TODO: ensure this width is consistent on different
+                                            //  displays
+                                            modifier = Modifier
+                                                .width(
+                                                    if (i == hearts.toString().length - 1) 11.dp
+                                                    else 8
+                                                        .dp
+                                                )
+                                        )
+                                    }
+                                }
                         }
                     }
                 }
@@ -762,7 +802,8 @@ fun GlimpseCard(
 
         // hearts
         val heartShownDuration = integerResource(R.integer.heart_shown_duration)
-        val heartBeforeExplosionDuration = integerResource(R.integer.heart_duration_before_explosion)
+        val heartBeforeExplosionDuration =
+            integerResource(R.integer.heart_duration_before_explosion)
         val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
 
         var heartTargets by remember {
@@ -947,6 +988,27 @@ enum class HeartState {
 enum class DetailPaneBreakpoint {
     COMPACT, MEDIUM, EXPANDED
 }
+
+data class Digit(val digitChar: Char, val fullNumber: Int, val place: Int) {
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            is Digit -> digitChar == other.digitChar
+            else -> super.equals(other)
+        }
+    }
+
+    override fun hashCode(): Int {
+        var result = digitChar.hashCode()
+        result = 31 * result + fullNumber
+        result = 31 * result + place
+        return result
+    }
+}
+
+operator fun Digit.compareTo(other: Digit): Int {
+    return fullNumber.compareTo(other.fullNumber)
+}
+
 
 // TODO: fix this guy right here
 // TODO: where should this go? should it be in a Util class? or do we just leave it here? other
