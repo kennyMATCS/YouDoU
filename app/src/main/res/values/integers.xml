@@ -48,6 +48,6 @@
     <integer name="far_seconds">28800</integer>
     <integer name="medium_seconds">3600</integer>
     <integer name="glimpse_record_delay">86400</integer>
-    <integer name="heart_repeat_amount">10</integer>
+    <integer name="heart_repeat_amount">25</integer>
     <integer name="heart_shown_duration">1500</integer>
 </resources>

@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
@@ -74,7 +73,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -111,6 +109,9 @@ data class DropDownItem(
 )
 
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
+
+// TODO: 2 new hearts on the time of buying basic membership. add hearts to all accounts every 24
+//  hours
 
 // TODO: like animation
 // TODO: like pop-up with heart count
@@ -501,19 +502,14 @@ fun GlimpseCard(
     var height by remember { mutableIntStateOf(1) }
 
     // TODO: better variable names
-    var startX by remember { mutableFloatStateOf(0f) }
-    var startY by remember { mutableFloatStateOf(0f) }
+    var startOffset by remember { mutableStateOf(Offset.Zero) }
+    var bubbling by remember { mutableStateOf(HeartState.HIDE) }
 
     GlimpseCardBase(
         modifier = modifier
             .onGloballyPositioned {
                 width = max(abs(it.size.width), 1)
                 height = max(abs(it.size.height), 1)
-
-                with(it.boundsInWindow().bottomRight) {
-                    startX = x
-                    startY = y
-                }
             }
     ) {
         Box {
@@ -579,7 +575,7 @@ fun GlimpseCard(
                         .pointerInteropFilter {
                             contextMenuOffset.value = Offset(it.x, it.y)
                             false
-                        },
+                        }
                 )
 
                 // TODO: change when expiration data isn't hardcoded
@@ -624,103 +620,6 @@ fun GlimpseCard(
                     @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
 
-                // TODO: test bubbling on different display sizes
-
-                // hearts
-                var bubbling by remember { mutableStateOf(HeartState.HIDE) }
-                val heartShownDuration = integerResource(R.integer.heart_shown_duration)
-                val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
-
-                var heartTargets by remember {
-                    mutableStateOf(
-                        List(heartRepeatAmount) {
-                            Offset(startX, startY)
-                        }
-                    )
-                }
-
-                LaunchedEffect(bubbling) {
-                    if (bubbling == HeartState.SHOW) {
-                        heartTargets = heartTargets.makeHeartTargets(width, height)
-
-                        // DELAY
-                        delay(heartShownDuration.toLong())
-                        // DELAY
-
-                        bubbling = HeartState.HIDE
-                    }
-                }
-
-                // TODO: ensure this works for different screen sizes. specifically landscape mode
-                //  . sometimes, the hearts are overlapped by the buttons at the bottom of
-                //  GlimpseCard because they are so big.
-
-                // TODO: in entire scaffold view, make sure globally positioning is correct for
-                //  heart startX startY
-
-                // TODO: improve heart spread
-
-                // TODO: make sure we can spam the heart button
-
-                val painter = rememberVectorPainter(Icons.Filled.Favorite)
-
-                val stiffness = 15f
-                val transition = updateTransition(bubbling)
-                val offsets = heartTargets.map {
-                    transition.animateOffset(
-                        transitionSpec = {
-                            spring(
-                                stiffness = stiffness,
-                            )
-                        }
-                    ) { state ->
-                        when (state) {
-                            HeartState.SHOW -> Offset(it.x, it.y)
-                            HeartState.HIDE -> Offset(startX, startY)
-                        }
-                    }
-                }
-
-                val opacity by transition.animateFloat(
-                    transitionSpec = { spring(stiffness = stiffness) }
-                ) { state ->
-                    when (state) {
-                        HeartState.SHOW -> 0f
-                        HeartState.HIDE -> 1f
-                    }
-                }
-
-                val scale by transition.animateFloat(
-                    transitionSpec = { spring(stiffness = stiffness) }
-                ) { state ->
-                    when (state) {
-                        HeartState.SHOW -> 2.5f
-                        HeartState.HIDE -> 1.0f
-                    }
-                }
-
-                Canvas(
-                    modifier = Modifier
-                ) {
-                    with(painter) {
-                        repeat(heartRepeatAmount) { i ->
-                            with(offsets[i]) {
-                                translate(value.x, value.y) {
-                                    draw(
-                                        painter.intrinsicSize * scale,
-                                        colorFilter = ColorFilter.tint(
-                                            HeartRed.copy(
-                                                alpha = if (bubbling == HeartState.SHOW) opacity
-                                                else 0f
-                                            )
-                                        ),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // hearts
                 Box(
                     modifier = Modifier
@@ -732,7 +631,10 @@ fun GlimpseCard(
 
                             vibrate(vibrator)
                         }
-                        .align(Alignment.BottomEnd)) {
+                        .align(Alignment.BottomEnd)
+                        .onGloballyPositioned {
+                            // startOffset = it.positionInRoot()
+                        }) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -762,7 +664,8 @@ fun GlimpseCard(
                         }
 
                         Icon(
-                            imageVector = icon, contentDescription = if (hearts == 0) {
+                            imageVector = icon,
+                            contentDescription = if (hearts == 0) {
                                 stringResource(
                                     R.string.no_hearts_content_description
                                 )
@@ -772,7 +675,8 @@ fun GlimpseCard(
                                         R.string.yes_hearts_content_description
                                     ), hearts
                                 )
-                            }, tint = tint, modifier = Modifier
+                            },
+                            tint = tint, modifier = Modifier,
                         )
 
                         if (hearts > 0) {
@@ -795,6 +699,94 @@ fun GlimpseCard(
                     .padding(vertical = 4.dp)
             )
         }
+
+        // TODO: test bubbling on different display sizes
+
+        // hearts
+        val heartShownDuration = integerResource(R.integer.heart_shown_duration)
+        val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
+
+        var heartTargets by remember {
+            mutableStateOf(
+                List(heartRepeatAmount) {
+                    startOffset
+                }
+            )
+        }
+
+        val stiffness = 10f
+        val transition = updateTransition(bubbling)
+
+        LaunchedEffect(bubbling) {
+            if (bubbling == HeartState.SHOW) {
+                heartTargets = heartTargets.makeHeartTargets(width, height)
+
+                // DELAY
+                delay(heartShownDuration.toLong())
+                // DELAY
+
+                bubbling = HeartState.HIDE
+            }
+        }
+
+        // TODO: make sure we can spam the heart button
+
+        val painter = rememberVectorPainter(Icons.Filled.Favorite)
+
+        val offsets = heartTargets.map {
+            transition.animateOffset(
+                transitionSpec = {
+                    spring(
+                        stiffness = stiffness,
+                    )
+                }
+            ) { state ->
+                when (state) {
+                    HeartState.SHOW -> Offset(it.x, it.y)
+                    HeartState.HIDE -> startOffset
+                }
+            }
+        }
+
+        val opacity by transition.animateFloat(
+            transitionSpec = { spring(stiffness = stiffness) }
+        ) { state ->
+            when (state) {
+                HeartState.SHOW -> 0f
+                HeartState.HIDE -> 1f
+            }
+        }
+
+        val scale by transition.animateFloat(
+            transitionSpec = { spring(stiffness = stiffness) }
+        ) { state ->
+            when (state) {
+                HeartState.SHOW -> 2.5f
+                HeartState.HIDE -> 1.0f
+            }
+        }
+
+        Canvas(
+            modifier = Modifier
+        ) {
+            with(painter) {
+                repeat(heartRepeatAmount) { i ->
+                    with(offsets[i]) {
+                        println("${transition.targetState} ${transition.isRunning} ${transition.isSeeking}")
+                        translate(value.x, value.y) {
+                            draw(
+                                painter.intrinsicSize * scale,
+                                colorFilter = ColorFilter.tint(
+                                    HeartRed.copy(
+                                        alpha = if (bubbling == HeartState.SHOW) opacity else 0f
+                                    )
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -802,8 +794,8 @@ fun GlimpseCard(
 private fun List<Offset>.makeHeartTargets(
     width: Int, height: Int
 ) = map {
-    val xRandom = (Random.nextInt(width / 4, (width - width / 8))).toFloat()
-    val yRandom = (Random.nextInt(height / 2, (height - height / 8))).toFloat()
+    val xRandom = Random.nextInt(0, width).toFloat()
+    val yRandom = Random.nextInt(0, height).toFloat()
     Offset(
         xRandom, yRandom
     )
