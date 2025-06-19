@@ -8,6 +8,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateOffset
@@ -18,7 +19,6 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,6 +66,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +85,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -121,6 +125,8 @@ data class DropDownItem(
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
 // TODO: the heart count could update in sync with the shake so we aren't spamming updates on screen
 // TODO: we could also just not shake unless the user is doing it themselves
+// TODO: we could only show hearts once the glimpse reaches certain milestones: 1, 5, 10, 20, 40,
+//  100, 200, 300, 400, 500, etc.
 
 // TODO: 2 new hearts on the time of buying basic membership. add hearts to all accounts every 24
 //  hours
@@ -155,17 +161,17 @@ data class DropDownItem(
 // TODO: what is unidirectional data flow pattern?
 // TODO: "Utility" class to mange all the callbacks. That way, we don't need to pass as many
 //  arguments down to child composables
+// TODO: is there a way to stop using mutablestate.value so much? ANSWERED
 
 // TODO: fix lag in with heart animation
 
-// TODO: FAB Explode Transition for NavHost
+// TODO: new NavHost transition
 
 // TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
 //  spigot
 
-// TODO: is there a way to stop using mutablestate.value so much?
 
-// TDOO: watermark for videos made. probably can be done through bunny
+// TODO: watermark for videos made. probably can be done through bunny
 
 // TODO: good comments for everything
 
@@ -174,6 +180,8 @@ data class DropDownItem(
 // TODO; report stack traces from crashes
 
 // TODO: go through logcat and just look for issues we should watch out for
+
+// TODO: better dark mode colors
 
 // TODO: control where videos are stored for app. ensure they can be easily accessed for the user
 //  . maybe have a setting to pick where they are stored. also, check android settings and make
@@ -383,6 +391,8 @@ var previewGlimpses = listOf(
 // TODO: visit weatherspoon
 // TODO: improve dropdown popup
 
+// TODO: dark mode in settings
+
 // TODO: maintain states for everything
 // TODO: how do we ensure local states are synced with API and people don't cheat the system
 // TODO: maybe only accept api calls for local app events if they are valid, i.e. times match up
@@ -392,13 +402,15 @@ var previewGlimpses = listOf(
 
 // TODO: ability to tap to focus with camera
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlimpseGrid(
     modifier: Modifier,
     glimpses: MutableList<Glimpse>,
     contentPadding: PaddingValues,
     onClickGlimpse: (Glimpse) -> Unit,
-    isPremium: Boolean
+    isPremium: Boolean,
+    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val detailPaneBreakpoint: DetailPaneBreakpoint = if (windowSizeClass.isAtLeastBreakpoint(
@@ -426,7 +438,8 @@ fun GlimpseGrid(
         },
         modifier = modifier
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.navigationBars),
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = with(contentPadding) {
             PaddingValues(
                 top = calculateTopPadding() + pad,
@@ -465,8 +478,8 @@ private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
             .padding(8.dp),
-        shadowElevation = 4.dp,
-        tonalElevation = 4.dp,
+        shadowElevation = 3.dp,
+        tonalElevation = 3.dp,
         shape = MaterialTheme.shapes.large,
     ) {
         content()
@@ -715,7 +728,8 @@ fun GlimpseCard(
                             .padding(cornerPadding)
                             .clip(behindShape)
                             .background(behindColor)
-                            .padding(behindPadding),
+                            .padding(behindPadding)
+                            .animateContentSize(),
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -732,7 +746,6 @@ fun GlimpseCard(
 
                             else -> {
                                 icon = Icons.Filled.Favorite
-                                // TODO: specify colors in Colors.kt
                                 tint = HeartRed
                             }
                         }
@@ -768,16 +781,18 @@ fun GlimpseCard(
                                             }
                                         }
                                     ) { digit ->
+                                        val last = hearts.toString().length - 1
                                         Text(
                                             text = "${digit.digitChar}",
                                             style = textStyle,
                                             // TODO: ensure this width is consistent on different
                                             //  displays
+                                            // TODO: ui check
+
                                             modifier = Modifier
                                                 .width(
-                                                    if (i == hearts.toString().length - 1) 11.dp
-                                                    else 8
-                                                        .dp
+                                                    if (i == last) 11.dp
+                                                    else 9.dp
                                                 )
                                         )
                                     }
@@ -1103,7 +1118,7 @@ fun PreviewGlimpseCardMedium() {
 @Preview
 @Composable
 fun PreviewGlimpseCardFar() {
-    var glimpse = previewGlimpses[3]
+    var glimpse = previewGlimpses[4]
 
     GlimpseCard(
         modifier = Modifier,
@@ -1120,6 +1135,7 @@ fun PreviewGlimpsePurchaseCard() {
 }
 
 // TODO: no supressions!
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
 @Preview
 @Composable
@@ -1129,6 +1145,7 @@ fun PreviewGlimpseGrid() {
         glimpses = previewGlimpses.toMutableList(),
         contentPadding = PaddingValues(4.dp),
         onClickGlimpse = { },
-        isPremium = false
+        isPremium = false,
+        scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     )
 }

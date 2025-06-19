@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -83,7 +84,8 @@ import kotlin.coroutines.suspendCoroutine
 
 const val delayBeforeShowingEditor = 1000L
 
-@OptIn(ExperimentalCamera2Interop::class)
+@ExperimentalMaterial3Api
+@OptIn(ExperimentalCamera2Interop::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GlimpseCamera(
     modifier: Modifier = Modifier,
@@ -140,6 +142,7 @@ fun GlimpseCamera(
     var openConfirmDialog = remember { mutableStateOf(false) }
     var openTimeoutDialog = remember { mutableStateOf(false) }
 
+    // TODO: make the bottom two when's neater
     when {
         openTimeoutDialog.value -> {
             AlertDialog(
@@ -201,7 +204,7 @@ fun GlimpseCamera(
             )
             Button(
                 onClick = {
-                    // TODO: upload logic
+                    // TODO: upload logic. use callback
                     uri.value = null
                 },
                 shape = MaterialTheme.shapes.medium,
@@ -213,7 +216,7 @@ fun GlimpseCamera(
                     .padding(6.dp)
                     .align(Alignment.BottomEnd)
             ) {
-                Text("Upload")
+                Text(stringResource(R.string.glimpse_upload_text))
             }
         }
     } else {
@@ -315,6 +318,7 @@ fun GlimpseCamera(
                 val interactionSource = remember { MutableInteractionSource() }
                 val glimpseRecordDelay = integerResource(R.integer.glimpse_record_delay).toLong()
 
+                // TODO: show dynamic timeout in actual dialog
                 IconButton(
                     onClick = {
                         if (!isRecording.value) {
@@ -424,6 +428,8 @@ fun ConfirmDialog(
     )
 }
 
+// TODO: no more suppressions for previews!
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun PreviewGlimpseCamera() {
@@ -438,6 +444,7 @@ fun PreviewGlimpseCamera() {
     )
 }
 
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun PreviewGlimpseCameraNoPermissions() {
@@ -455,19 +462,23 @@ fun PreviewGlimpseCameraNoPermissions() {
 // TODO: fix this little guy!
 //  we could add a parent composable that doesn't have the exoplayer in it, but the content of the
 //  composable in the primary code is an actual exoplayer
+
+// TODO: no more suppressions for previews!
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
+// TODO: don't use full class name
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun PreviewGlimpseRecording() {
     var context = LocalContext.current
 
     GlimpseCamera(
+        canUseCamera = remember { mutableStateOf(true) },
+        canUseCameraAudio = remember { mutableStateOf(true) },
         secondsUntilCanRecordAgain = remember { mutableLongStateOf(60 * 60 * 24) },
         isRecording = remember { mutableStateOf(false) },
         atEnd = remember { mutableStateOf(false) },
-        activity = null,
-        canUseCamera = remember { mutableStateOf(true) },
-        canUseCameraAudio = remember { mutableStateOf(true) },
-        uri = remember { mutableStateOf(R.raw.preview_5.getUri(context)) }
+        uri = remember { mutableStateOf(R.raw.preview_5.getUri(context)) },
+        activity = null
     )
 }
 

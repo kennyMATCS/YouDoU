@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,10 +38,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -111,7 +115,7 @@ class MainActivity : ComponentActivity() {
         // Register the permissions callback, which handles the user's response to the
         // system permissions dialog. Save the return value, an instance of
         // ActivityResultLauncher. You can use either a val, as shown in this snippet,
-        // or a lateinit var in your onAttach() or onCreate() method.
+        // or a late-init var in your onAttach() or onCreate() method.
         requestPermissionLauncher =
             registerForActivityResult(
                 RequestMultiplePermissions()
@@ -258,6 +262,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouDoUScaffold(
     glimpses: List<Glimpse> = listOf(),
@@ -278,6 +283,7 @@ fun YouDoUScaffold(
     var secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) }
     val atEnd = remember { mutableStateOf(false) }
 
+    // TODO: put this in our state manager util class
     LaunchedEffect(secondsUntilCanRecordAgain.longValue) {
         if (secondsUntilCanRecordAgain.longValue > 0) {
             delay(1000L)
@@ -285,16 +291,39 @@ fun YouDoUScaffold(
         }
     }
 
+    val topBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
+        state = topBarState
+    )
+
+    var heightOffsetTarget by remember { mutableFloatStateOf(0f) }
+    val heightOffset by animateFloatAsState(
+        targetValue = heightOffsetTarget
+    )
+
     Scaffold(
         topBar = {
-            YouDoUTopBar(onClickSettings, secondsUntilCanRecordAgain)
+            // TODO: secondsUntilRecordAgain should be callback
+            YouDoUTopBar(
+                onClickSettings = onClickSettings,
+                secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
+                scrollBehavior = scrollBehavior
+            )
         }) { innerPadding ->
         HorizontalPager(
             state = pagerState, modifier = Modifier.fillMaxSize(),
             userScrollEnabled = !recording.value
         ) { page ->
             when (page) {
+                // TODO: when can get rid of a lot of these arguments with callbacks
+                // TODO; for example: activity, uri, canUseCamera..., atEnd, isRecording, ...
+
                 AppDestinations.RECORD.pageNumber -> {
+                    if (pagerState.targetPage == AppDestinations.RECORD.pageNumber) {
+                        heightOffsetTarget = topBarState.heightOffsetLimit
+                        topBarState.heightOffset = heightOffset
+                    }
+
                     GlimpseCamera(
                         contentPadding = innerPadding,
                         canUseCamera = canUseCameraCallback,
@@ -303,21 +332,28 @@ fun YouDoUScaffold(
                         isRecording = recording,
                         atEnd = atEnd,
                         uri = uri,
-                        activity = activity,
+                        activity = activity
                     )
                 }
 
+                // TODO: maybe have top-bar pull up to previous state when swiping left or right?
                 AppDestinations.VIEW.pageNumber -> {
+                    if (pagerState.targetPage == AppDestinations.VIEW.pageNumber) {
+                        heightOffsetTarget = topBarState.heightOffset
+                    }
+
                     GlimpseGrid(
                         modifier = Modifier,
                         isPremium = isPremium,
                         glimpses = glimpses.toMutableList(),
                         contentPadding = innerPadding,
-                        onClickGlimpse = onClickGlimpse
+                        onClickGlimpse = onClickGlimpse,
+                        scrollBehavior = scrollBehavior
                     )
                 }
             }
         }
+
     }
 }
 
@@ -326,32 +362,34 @@ private fun Color.gradient(): Brush {
         colors = listOf(
             copy(alpha = 1f),
             copy(alpha = .8f),
-            copy(alpha = .6f),
-            copy(alpha = .4f),
-            copy(alpha = .2f),
-            Color.Transparent
+            copy(alpha = .7f),
+            copy(alpha = .5f),
+            copy(alpha = .3f),
         ),
         startY = 0f,
     )
 }
 
-// TODO: ui check topbar, settings, glimpse videos, glimpse player
-
+// TODO: ui check top-bar, settings, glimpse videos, glimpse player
+// TODO: transparent top bar in camera
+// TODO: ensure top bar behavior resets when switching to camera
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouDoUTopBar(
     onClickSettings: () -> Unit = { },
     secondsUntilCanRecordAgain: MutableState<Long>,
+    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val color = MaterialTheme.colorScheme.primaryContainer
 
     Surface(
-        shadowElevation = 10.dp,
+        shadowElevation = 3.dp
     ) {
         TopAppBar(
             title = {
                 YouDoUTopText()
             },
+            scrollBehavior = scrollBehavior,
             actions = {
                 val iconPadding = 10.dp
 
@@ -399,12 +437,13 @@ fun YouDoUTopBar(
                         })
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent,
             ),
-            modifier = Modifier.background(color.gradient()),
+            modifier = Modifier
+                .background(color.gradient()),
         )
     }
-
 }
 
 @Composable
@@ -417,6 +456,9 @@ fun YouDoUTopText(modifier: Modifier = Modifier) {
     )
 }
 
+// TODO: put this in it's own class
+// TODO: better settings organization. probably only need one page. Haptics divider,
+//  Accessibility divider
 @Preview
 @Composable
 fun YouDoUSettings() {
@@ -481,12 +523,14 @@ fun PreviewScaffold() {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun PreviewYouDoUTopBar() {
     YouDoUTopBar(
-        onClickSettings = { },
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) })
+        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) },
+        scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    )
 }
 
 private fun Long.formatTimeSeconds(): String {

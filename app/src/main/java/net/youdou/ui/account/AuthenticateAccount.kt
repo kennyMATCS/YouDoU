@@ -53,6 +53,7 @@ import net.youdou.YouDoUTopText
 
 const val TITLE_SCALE = 1.5f
 
+// TODO: try on different display sizes, landscape and portrait. make sure insets are okay
 @Composable
 fun AccountStartPage(navigateSignIn: () -> Unit, navigateSignUp: () -> Unit) {
     Box(
