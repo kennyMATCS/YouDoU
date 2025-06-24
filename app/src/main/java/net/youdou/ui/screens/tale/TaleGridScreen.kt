@@ -7,6 +7,7 @@ import android.os.VibratorManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateOffset
 import androidx.compose.animation.core.repeatable
@@ -21,7 +22,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +65,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -77,9 +78,11 @@ import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -89,9 +92,7 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import net.youdou.R
 import net.youdou.ui.theme.HeartRed
-import net.youdou.util.DetailPaneBreakpoint
 import net.youdou.util.Digit
-import net.youdou.util.HeartState
 import net.youdou.util.compareTo
 import net.youdou.util.formatTimeSeconds
 import net.youdou.util.previewTales
@@ -114,6 +115,7 @@ data class Tale(
 data class DropDownItem(
     val text: String, val isError: Boolean, val onItemClick: () -> Unit
 )
+
 // TODO: add this to resource manager?
 val DROP_DOWN_ITEMS = listOf(
     DropDownItem("Report", isError = true, onItemClick = { }),
@@ -121,6 +123,10 @@ val DROP_DOWN_ITEMS = listOf(
 )
 
 const val TALE_DURATION_SPECIFIER = "%tale_duration"
+
+enum class DetailPaneBreakpoint {
+    COMPACT, MEDIUM, EXPANDED
+}
 
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
 // TODO: the heart count could update in sync with the shake so we aren't spamming updates on screen
@@ -150,6 +156,8 @@ const val TALE_DURATION_SPECIFIER = "%tale_duration"
 
 // TODO: have a way for users to see how many times people liked and viewed their tale. this
 //  is VERY IMPORTANT
+
+// TODO: prevent recorded video from stretching once opening to edit
 
 // TODO: keep app data saved when tabbing out. rememberSaveable
 
@@ -389,26 +397,24 @@ fun TaleCard(
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
 
     // TODO: better var names
-    var width by remember { mutableIntStateOf(1) }
-    var height by remember { mutableIntStateOf(1) }
+    var cardWidth by remember { mutableIntStateOf(1) }
+    var cardHeight by remember { mutableIntStateOf(1) }
 
     // TODO: better variable names
     // TODO: mutable state callables
-    var startOffset by remember { mutableStateOf(Offset.Zero) }
-    var bubbling by remember { mutableStateOf(HeartState.END) }
-    var explode by remember { mutableStateOf(false) }
-    val transition = updateTransition(explode)
-    val shakeTransition = updateTransition(bubbling)
+    var explodingHeartsStartOffset by remember { mutableStateOf(Offset.Zero) }
+    var isBubbling by remember { mutableStateOf(false) }
+    var isExploding by remember { mutableStateOf(false) }
+    val shakeTransition = updateTransition(isBubbling)
 
     // TODO: setting to disable vibrate shake
     // TODO: setting to disable visual shake
     // TODO: setting to disable live heart explosion updates
 
-    // TODO: make this into a callback
-    // TODO: make everything into a callback!
-
-    var left = true
+    var shakingLeft = true
     val shake = 1.5f
+    
+    val explodeTransition = updateTransition(isExploding)
     val cardShake by shakeTransition.animateOffset(
         transitionSpec = {
             repeatable(
@@ -419,20 +425,20 @@ fun TaleCard(
         }
     ) { state ->
         when (state) {
-            HeartState.BEGIN -> {
-                left = !left
-                if (left) Offset(-shake, -shake) else Offset(shake, shake)
+            true -> {
+                shakingLeft = !shakingLeft
+                if (shakingLeft) Offset(-shake, -shake) else Offset(shake, shake)
             }
 
-            HeartState.END -> Offset(0f, 0f)
+            false -> Offset(0f, 0f)
         }
     }
 
     TaleCardBase(
         modifier = modifier
             .onGloballyPositioned {
-                width = max(abs(it.size.width), 1)
-                height = max(abs(it.size.height), 1)
+                cardWidth = max(abs(it.size.width), 1)
+                cardHeight = max(abs(it.size.height), 1)
             }
             .offset(x = cardShake.x.dp, y = cardShake.y.dp)
     ) {
@@ -445,9 +451,6 @@ fun TaleCard(
                 tale = tale,
             )
         }
-
-        val farSeconds = integerResource(R.integer.far_seconds)
-        val mediumSeconds = integerResource(R.integer.medium_seconds)
 
         Column(
             modifier = Modifier
@@ -463,50 +466,9 @@ fun TaleCard(
             Box {
                 val secs = integerResource(tale.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
-
-                val expirationColor = if (!isSystemInDarkTheme()) {
-                    when {
-                        expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
-                        expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
-                        else -> MaterialTheme.colorScheme.error
-                    }
-                } else {
-                    when {
-                        expirationSeconds > farSeconds -> MaterialTheme.colorScheme.onSurface
-                        expirationSeconds > mediumSeconds -> MaterialTheme.colorScheme.onSurface
-                        else -> MaterialTheme.colorScheme.error
-                    }
-                }
-
-                // TODO: make this constant ?
-                val heightFactor: Float = (expirationSeconds / (60f * 60f))
-
-                // TODO: split into it's own composable
-                // gray expiration bar and thumbnail
-                Image(
-                    painter = painterResource(tale.thumbnail),
-                    contentDescription = stringResource(tale.contentDescription),
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.medium)
-                        .drawWithContent {
-                            drawContent()
-                            if (expirationSeconds < mediumSeconds) {
-                                drawRect(
-                                    color = Color(0, 0, 0, 125), size = Size(
-                                        size.width - (size.width * heightFactor), size.height
-                                    )
-                                )
-                            }
-                        }
-                        .combinedClickable(true, onClick = {
-                            onClickTale(tale)
-                        }, onLongClick = {
-                            isContextMenuVisible = true
-                        })
-                        .pointerInteropFilter {
-                            contextMenuOffset= Offset(it.x, it.y)
-                            false
-                        }
+                val expirationSecondsWarningThreshold = integerResource(
+                    R.integer
+                        .expiration_seconds_warning_threshold
                 )
 
                 // TODO: change when expiration data isn't hardcoded. api connection
@@ -520,148 +482,51 @@ fun TaleCard(
                     cancel()
                 }
 
-                // TODO: split into its own composable
-                // time
-                Box(
+                TaleImage(
+                    tale = tale,
+                    expirationSeconds = expirationSeconds,
+                    expirationSecondsWarningThreshold = expirationSecondsWarningThreshold,
+                    onClickTale = onClickTale,
+                    makeContextMenuVisible = { isContextMenuVisible = true },
+                    setContextMenuOffset = { contextMenuOffset = it },
+                ) 
+
+                TaleTime(
                     modifier = Modifier
-                        .padding(cornerPadding)
-                        .align(Alignment.BottomStart)
-                ) {
-                    Text(
-                        fontWeight = if (expirationSeconds < mediumSeconds) FontWeight.Bold else FontWeight.Normal,
-                        text = expirationSeconds.formatTimeSeconds(),
-                        style = textStyle,
-                        color = expirationColor,
-                        modifier = modifier
-                            .clip(behindShape)
-                            .background(behindColor)
-                            .padding(behindPadding)
-                    )
-                }
+                        .align(Alignment.BottomStart),
+                    behindShape = behindShape,
+                    behindColor = behindColor,
+                    behindPadding = behindPadding,
+                    cornerPadding = cornerPadding,
+                    textStyle = textStyle,
+                    expirationSeconds = expirationSeconds,
+                    expirationSecondsWarningThreshold = expirationSecondsWarningThreshold,
+                )
 
-                val heartsVal = integerResource(tale.hearts)
-                var hearts by remember { mutableIntStateOf(heartsVal) }
-
-                val context = LocalContext.current
-                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val vibratorManager = context.getSystemService(
-                        Context.VIBRATOR_MANAGER_SERVICE
-                    ) as VibratorManager
-                    vibratorManager.defaultVibrator
-                } else {
-                    @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                }
-
-                // TODO: split into it's own composable
-                // hearts
-                Box(
+                TaleHeartCount(
                     modifier = Modifier
-                        .clip(behindShape)
-                        .clickable {
-                            if (!transition.isRunning) {
-                                // TODO: mutable state callable maybe?
-                                hearts++
+                        .align(Alignment.BottomEnd),
+                    tale = tale,
+                    behindShape = behindShape,
+                    behindColor = behindColor,
+                    behindPadding = behindPadding,
+                    cornerPadding = cornerPadding,
+                    textStyle = textStyle,
+                    explodeTransition = explodeTransition,
+                    startBubbling = { isBubbling = true }
+                )
 
-                                bubbling = HeartState.BEGIN
-
-                                // TODO: open heart composable right here, the current behavior
-                                //  in this if statement should have through that composable instead
-
-                                // TODO: ensure that when that heart composable is open. no heart
-                                //  animations can be send to prioritize that user get a heart
-                                //  animation sent
-
-                                // TODO: show other live heart updates somehow. we can use a heart
-                                //  animation callback
-
-                                vibrate(vibrator)
-                            }
-                        }
-                        .align(Alignment.BottomEnd)
-                        .onGloballyPositioned {
-                            // startOffset = it.positionInRoot()
-                        }) {
-
-                    // TODO: animate width increase
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(cornerPadding)
-                            .clip(behindShape)
-                            .background(behindColor)
-                            .padding(behindPadding)
-                            .animateContentSize(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val icon: ImageVector
-                        val tint: Color
-
-                        when (hearts) {
-                            0 -> {
-                                icon = ImageVector.vectorResource(
-                                    R.drawable.outline_favorite
-                                )
-                                tint = MaterialTheme.colorScheme.onSurface
-                            }
-
-                            else -> {
-                                icon = Icons.Filled.Favorite
-                                tint = HeartRed
-                            }
-                        }
-
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = if (hearts == 0) {
-                                stringResource(
-                                    R.string.no_hearts_content_description
-                                )
-                            } else {
-                                String.format(
-                                    stringResource(
-                                        R.string.yes_hearts_content_description
-                                    ), hearts
-                                )
-                            },
-                            tint = tint, modifier = Modifier,
-                        )
-
-                        // TODO: we gotta test this
-                        if (hearts > 0) {
-                            hearts.toString()
-                                .mapIndexed { index, c -> Digit(c, hearts, index) }
-                                .forEachIndexed { i, digit ->
-                                    AnimatedContent(
-                                        targetState = digit,
-                                        transitionSpec = {
-                                            // TODO: how to make this be just greater than sign
-                                            if (targetState > initialState) {
-                                                slideInVertically { -it } togetherWith slideOutVertically { it }
-                                            } else {
-                                                slideInVertically { it } togetherWith slideOutVertically { -it }
-                                            }
-                                        }
-                                    ) { digit ->
-                                        val last = hearts.toString().length - 1
-                                        Text(
-                                            text = "${digit.digitChar}",
-                                            style = textStyle,
-                                            // TODO: ensure this width is consistent on different
-                                            //  displays
-                                            // TODO: ui check
-
-                                            modifier = Modifier
-                                                .width(
-                                                    if (i == last) 11.dp
-                                                    else 9.dp
-                                                )
-                                        )
-                                    }
-                                }
-                        }
-                    }
-                }
+                ExplodingHearts(
+                    explodingHeartsStartOffset = explodingHeartsStartOffset,
+                    isBubbling = isBubbling,
+                    isExploding = isExploding,
+                    stopBubbling = { isBubbling = false },
+                    startExploding = { isExploding = true },
+                    stopExploding = { isExploding = false },
+                    cardWidth,
+                    cardHeight,
+                    explodeTransition = explodeTransition
+                )
             }
 
             Text(
@@ -674,103 +539,103 @@ fun TaleCard(
                     .padding(vertical = 4.dp)
             )
         }
+    }
+}
 
-        // TODO: test bubbling on different display sizes
-
-        // hearts
-        val heartShownDuration = integerResource(R.integer.heart_shown_duration)
-        val heartBeforeExplosionDuration =
-            integerResource(R.integer.heart_duration_before_explosion)
-        val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
-
-        var heartTargets by remember {
-            mutableStateOf(
-                List(heartRepeatAmount) {
-                    startOffset
-                }
-            )
-        }
-
-        val stiffness = 10f
-
-        LaunchedEffect(bubbling) {
-            if (bubbling == HeartState.BEGIN) {
-                // DELAY
-                delay(heartBeforeExplosionDuration.toLong())
-                // DELAY
-
-                explode = true
-                heartTargets = heartTargets.makeHeartTargets(width, height)
-                bubbling = HeartState.END
+// TODO: test bubbling on different display sizes
+@Composable
+fun ExplodingHearts(
+    explodingHeartsStartOffset: Offset,
+    isBubbling: Boolean,
+    isExploding: Boolean,
+    stopBubbling: () -> Unit,
+    startExploding: () -> Unit,
+    stopExploding: () -> Unit,
+    cardWidth: Int,
+    cardHeight: Int,
+    explodeTransition: Transition<Boolean>,
+) {
+    val heartShownDuration = integerResource(R.integer.heart_shown_duration)
+    val heartBeforeExplosionDuration =
+        integerResource(R.integer.heart_duration_before_explosion)
+    val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
+    var heartTargets by remember {
+        mutableStateOf(
+            List(heartRepeatAmount) {
+                explodingHeartsStartOffset
             }
+        )
+    }
+
+    LaunchedEffect(isBubbling) {
+        if (isBubbling) {
+            delay(heartBeforeExplosionDuration.toLong())
+
+            heartTargets = heartTargets.makeHeartTargets(cardWidth, cardHeight)
+            startExploding()
+            stopBubbling()
         }
+    }
 
-        // these happen in succession
+    LaunchedEffect(isExploding) {
+        if (isExploding) {
+            delay(heartShownDuration.toLong())
 
+            stopExploding()
+        }
+    }
 
-        LaunchedEffect(explode) {
-            if (explode == true) {
-                // DELAY
-                delay(heartShownDuration.toLong())
-                // DELAY
-
-                explode = false
+    // TODO: make sure we can spam the heart button
+    val painter = rememberVectorPainter(Icons.Filled.Favorite)
+    val stiffness = 10f
+    val offsets = heartTargets.map {
+        explodeTransition.animateOffset(
+            transitionSpec = {
+                spring(
+                    stiffness = stiffness,
+                )
             }
-        }
-
-        // TODO: make sure we can spam the heart button
-
-        val painter = rememberVectorPainter(Icons.Filled.Favorite)
-
-        val offsets = heartTargets.map {
-            transition.animateOffset(
-                transitionSpec = {
-                    spring(
-                        stiffness = stiffness,
-                    )
-                }
-            ) { state ->
-                when (state) {
-                    true -> Offset(it.x, it.y)
-                    false -> startOffset
-                }
-            }
-        }
-
-        val opacity by transition.animateFloat(
-            transitionSpec = { spring(stiffness = stiffness) }
         ) { state ->
             when (state) {
-                true -> 0f
-                false -> 1f
+                true -> Offset(it.x, it.y)
+                false -> explodingHeartsStartOffset
             }
         }
+    }
 
-        val scale by transition.animateFloat(
-            transitionSpec = { spring(stiffness = stiffness) }
-        ) { state ->
-            when (state) {
-                true -> 2.5f
-                false -> 1.0f
-            }
+    val opacity by explodeTransition.animateFloat(
+        transitionSpec = { spring(stiffness = stiffness) }
+    ) { state ->
+        when (state) {
+            true -> 0f
+            false -> 1f
         }
+    }
 
-        Canvas(
-            modifier = Modifier
-        ) {
-            with(painter) {
-                repeat(heartRepeatAmount) { i ->
-                    with(offsets[i]) {
-                        translate(value.x, value.y) {
-                            draw(
-                                painter.intrinsicSize * scale,
-                                colorFilter = ColorFilter.tint(
-                                    HeartRed.copy(
-                                        alpha = if (explode == true) opacity else 0f
-                                    )
-                                ),
-                            )
-                        }
+    val scale by explodeTransition.animateFloat(
+        transitionSpec = { spring(stiffness = stiffness) }
+    ) { state ->
+        when (state) {
+            true -> 2.5f
+            false -> 1.0f
+        }
+    }
+
+    Canvas(
+        modifier = Modifier
+    ) {
+        with(painter) {
+            repeat(heartRepeatAmount) { i ->
+                with(offsets[i]) {
+                    translate(value.x, value.y) {
+                        draw(
+                            painter.intrinsicSize * scale,
+                            colorFilter = ColorFilter.tint(
+                                HeartRed.copy(
+                                    alpha = if (isExploding) opacity else 0f
+                                )
+                            ),
+                        )
                     }
                 }
             }
@@ -831,6 +696,211 @@ fun YouDoUDropDown(
                     style = MaterialTheme.typography.bodyLarge,
                 )
             })
+        }
+    }
+}
+
+@Composable
+fun TaleImage(
+    tale: Tale,
+    expirationSeconds: Long,
+    expirationSecondsWarningThreshold: Int,
+    onClickTale: (Tale) -> Unit,
+    makeContextMenuVisible: () -> Unit,
+    setContextMenuOffset: (Offset) -> Unit,
+) {
+    val heightFactor: Float = (expirationSeconds / (60f * 60f))
+
+    // TODO: split into it's own composable
+    // gray expiration bar and thumbnail
+    Image(
+        painter = painterResource(tale.thumbnail),
+        contentDescription = stringResource(tale.contentDescription),
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .drawWithContent {
+                drawContent()
+                // TODO: replace me with a simple boolean to pass to the composable
+                if (expirationSeconds < expirationSecondsWarningThreshold) {
+                    drawRect(
+                        color = Color(0, 0, 0, 125), size = Size(
+                            size.width - (size.width * heightFactor), size.height
+                        )
+                    )
+                }
+            }
+            .combinedClickable(true, onClick = {
+                onClickTale(tale)
+            }, onLongClick = {
+                makeContextMenuVisible()
+            })
+            .pointerInteropFilter {
+                setContextMenuOffset(Offset(it.x, it.y))
+                false
+            }
+    )
+}
+
+@Composable
+fun TaleTime(
+    modifier: Modifier,
+    behindShape: Shape,
+    behindColor: Color,
+    behindPadding: Dp,
+    cornerPadding: Dp,
+    textStyle: TextStyle,
+    expirationSeconds: Long,
+    expirationSecondsWarningThreshold: Int,
+) {
+    val expirationFontWeight =
+        if (expirationSeconds < expirationSecondsWarningThreshold) FontWeight.Bold else FontWeight.Normal
+    val expirationColor =
+        if (expirationSeconds < expirationSecondsWarningThreshold) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = modifier
+            .padding(cornerPadding)
+    ) {
+        Text(
+            fontWeight = expirationFontWeight,
+            text = expirationSeconds.formatTimeSeconds(),
+            style = textStyle,
+            color = expirationColor,
+            modifier = modifier
+                .clip(behindShape)
+                .background(behindColor)
+                .padding(behindPadding)
+        )
+    }
+}
+
+@Composable
+fun TaleHeartCount(
+    modifier: Modifier,
+    tale: Tale,
+    behindShape: Shape,
+    behindColor: Color,
+    behindPadding: Dp,
+    cornerPadding: Dp,
+    textStyle: TextStyle,
+    explodeTransition: Transition<Boolean>,
+    startBubbling: () -> Unit,
+) {
+    val heartsVal = integerResource(tale.hearts)
+    var hearts by remember { mutableIntStateOf(heartsVal) }
+
+    val context = LocalContext.current
+    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vibratorManager = context.getSystemService(
+            Context.VIBRATOR_MANAGER_SERVICE
+        ) as VibratorManager
+        vibratorManager.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
+    Box(
+        modifier = modifier
+            .clip(behindShape)
+            .clickable {
+                if (!explodeTransition.isRunning) {
+                    // TODO: mutable state callable maybe?
+                    hearts++
+
+                    startBubbling()
+
+                    // TODO: open heart composable right here, the current behavior
+                    //  in this if statement should have through that composable instead
+
+                    // TODO: ensure that when that heart composable is open. no heart
+                    //  animations can be send to prioritize that user get a heart
+                    //  animation sent
+
+                    // TODO: show other live heart updates somehow. we can use a heart
+                    //  animation callback
+
+                    vibrate(vibrator)
+                }
+            }) {
+
+        // TODO: animate width increase
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(cornerPadding)
+                .clip(behindShape)
+                .background(behindColor)
+                .padding(behindPadding)
+                .animateContentSize(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val icon: ImageVector
+            val tint: Color
+
+            when (hearts) {
+                0 -> {
+                    icon = ImageVector.vectorResource(
+                        R.drawable.outline_favorite
+                    )
+                    tint = MaterialTheme.colorScheme.onSurface
+                }
+
+                else -> {
+                    icon = Icons.Filled.Favorite
+                    tint = HeartRed
+                }
+            }
+
+            Icon(
+                imageVector = icon,
+                contentDescription = if (hearts == 0) {
+                    stringResource(
+                        R.string.no_hearts_content_description
+                    )
+                } else {
+                    String.format(
+                        stringResource(
+                            R.string.yes_hearts_content_description
+                        ), hearts
+                    )
+                },
+                tint = tint, modifier = Modifier,
+            )
+
+            // TODO: we gotta test this
+            if (hearts > 0) {
+                hearts.toString()
+                    .mapIndexed { index, c -> Digit(c, hearts, index) }
+                    .forEachIndexed { i, digit ->
+                        AnimatedContent(
+                            targetState = digit,
+                            transitionSpec = {
+                                // TODO: how to make this be just greater than sign
+                                if (targetState > initialState) {
+                                    slideInVertically { -it } togetherWith slideOutVertically { it }
+                                } else {
+                                    slideInVertically { it } togetherWith slideOutVertically { -it }
+                                }
+                            }
+                        ) { digit ->
+                            val last = hearts.toString().length - 1
+                            Text(
+                                text = "${digit.digitChar}",
+                                style = textStyle,
+                                // TODO: ensure this width is consistent on different
+                                //  displays
+                                // TODO: ui check
+
+                                modifier = Modifier
+                                    .width(
+                                        if (i == last) 11.dp
+                                        else 9.dp
+                                    )
+                            )
+                        }
+                    }
+            }
         }
     }
 }

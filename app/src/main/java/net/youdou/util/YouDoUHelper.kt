@@ -11,17 +11,6 @@ import androidx.compose.ui.graphics.Color
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
-// TODO: do we even need this
-// TODO: maybe move it. it could go in TaleGridScreen
-enum class HeartState {
-    BEGIN, END
-}
-
-// TODO: maybe move it. it could go in TaleGridScreen
-enum class DetailPaneBreakpoint {
-    COMPACT, MEDIUM, EXPANDED
-}
-
 fun @receiver:RawRes Int.getUri(context: Context): Uri {
     val item = this
 

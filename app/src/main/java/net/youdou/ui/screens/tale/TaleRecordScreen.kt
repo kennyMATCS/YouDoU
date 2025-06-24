@@ -242,9 +242,7 @@ fun TaleCamera(
                     lifecycleOwner = lifecycleOwner,
                     cameraSelector = cameraSelector,
                     previewView = previewView,
-                    cameraProvider = cameraProvider,
                     setCameraProvider = { cameraProvider = it },
-                    preview = preview,
                     setPreview = { preview = it }
                 )
             }
@@ -651,9 +649,7 @@ suspend fun Context.createVideoCaptureUseCase(
     lifecycleOwner: LifecycleOwner,
     cameraSelector: CameraSelector,
     previewView: PreviewView,
-    preview: Preview?,
     setPreview: (Preview) -> Unit,
-    cameraProvider: ProcessCameraProvider?,
     setCameraProvider: (ProcessCameraProvider) -> Unit
 ): VideoCapture<Recorder> {
     val tempPreview = Preview.Builder().build().apply {

@@ -45,8 +45,7 @@
     <integer name="password_min_length">8</integer>
     <integer name="phone_min_length">10</integer>
     <integer name="username_min_length">5</integer>
-    <integer name="far_seconds">28800</integer>
-    <integer name="medium_seconds">3600</integer>
+    <integer name="expiration_seconds_warning_threshold">3600</integer>
     <integer name="tale_record_delay">86400</integer>
     <integer name="heart_repeat_amount">35</integer>
     <integer name="heart_shown_duration">2000</integer>
