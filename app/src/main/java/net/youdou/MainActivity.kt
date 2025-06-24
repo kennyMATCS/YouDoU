@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
+import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -53,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -73,17 +74,23 @@ import com.alorma.compose.settings.ui.SettingsRadioButton
 import com.alorma.compose.settings.ui.SettingsSwitch
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
-import net.youdou.ui.account.AccountSignInPage
-import net.youdou.ui.account.AccountSignUpPage
-import net.youdou.ui.account.AccountStartPage
-import net.youdou.ui.glimpse.Glimpse
-import net.youdou.ui.glimpse.GlimpseGrid
-import net.youdou.ui.glimpse.player.GlimpseWatchPlayer
-import net.youdou.ui.glimpse.previewGlimpses
-import net.youdou.ui.glimpse.record.GlimpseCamera
+import net.youdou.ui.screens.account.AccountSignInPage
+import net.youdou.ui.screens.account.AccountSignUpPage
+import net.youdou.ui.screens.account.AccountStartPage
+import net.youdou.ui.screens.tale.Tale
+import net.youdou.ui.screens.tale.TaleCamera
+import net.youdou.ui.screens.tale.TaleGrid
+import net.youdou.ui.screens.tale.player.TalePlayer
 import net.youdou.ui.theme.YouDoUTheme
+import net.youdou.util.AppDestinations
+import net.youdou.util.getUri
+import net.youdou.util.gradient
+import net.youdou.util.previewTales
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
+
+// TODO: can we do these serializables somewhere else.
+// TODO: research what a main class should look like
 
 @Serializable
 object MainApp
@@ -105,9 +112,8 @@ object AccountSignUp
 
 class MainActivity : ComponentActivity() {
     lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
-    var canUseCameraCallback = mutableStateOf(false)
-    var canUseCameraAudioCallback = mutableStateOf(false)
-    var isPremium = false
+    var canUseCamera by mutableStateOf(false)
+    var canUseCameraAudio by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,24 +122,24 @@ class MainActivity : ComponentActivity() {
         // system permissions dialog. Save the return value, an instance of
         // ActivityResultLauncher. You can use either a val, as shown in this snippet,
         // or a late-init var in your onAttach() or onCreate() method.
+        // TODO: can we do this somewhere else in a function
         requestPermissionLauncher =
             registerForActivityResult(
                 RequestMultiplePermissions()
             ) { granted ->
-                granted.forEach { a ->
-                    when (a.key) {
+                granted.forEach { action ->
+                    when (action.key) {
                         Manifest.permission.CAMERA -> {
-                            if (a.value) canUseCameraCallback.value = true
+                            if (action.value) canUseCamera = true
                         }
 
                         Manifest.permission.RECORD_AUDIO -> {
-                            if (a.value) canUseCameraAudioCallback.value = true
+                            if (action.value) canUseCameraAudio = true
                         }
                     }
                 }
             }
 
-        val uri: MutableState<Uri?> = mutableStateOf(null)
         val activity = this
 
         enableEdgeToEdge()
@@ -150,6 +156,7 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         startDestination = AccountStartPage,
 
+                        // TODO: animation manager
                         enterTransition = {
                             slideInVertically(initialOffsetY = { -40 }) + expandVertically(
                                 expandFrom = Alignment.CenterVertically
@@ -211,15 +218,20 @@ class MainActivity : ComponentActivity() {
                                 show(WindowInsetsCompat.Type.systemBars())
                             }
 
+                            var isRecording by remember { mutableStateOf(false) }
+                            var recordingTimeout by remember { mutableLongStateOf(0L) }
+                            var currentRecordedVideoUri by remember { mutableStateOf<Uri?>(null) }
+                            var tales = remember { previewTales.toMutableList() } // TODO: change in full version
+                            var lensFacing by remember { mutableIntStateOf(LENS_FACING_FRONT) }
+
                             YouDoUScaffold(
                                 activity = activity,
-                                glimpses = previewGlimpses,
-                                isPremium = isPremium,
-                                onClickGlimpse = { glimpse ->
+                                tales = tales.toList(),
+                                onClickTale = { tale ->
                                     navController.navigate(
-                                        route = glimpse
+                                        route = tale
                                     ) {
-                                        popUpTo(route = glimpse) {
+                                        popUpTo(route = tale) {
                                             inclusive = true
                                         }
                                     }
@@ -231,27 +243,47 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                canUseCameraCallback = canUseCameraCallback,
-                                canUseCameraAudioCallback = canUseCameraAudioCallback,
-                                uri = uri
+                                isRecording = isRecording,
+                                toggleRecording = { isRecording = !isRecording },
+                                recordingTimeout = recordingTimeout,
+                                decrementRecordingTimeout = { recordingTimeout -= 1L },
+                                setRecordingTimeout = { recordingTimeout = it },
+                                canUseCamera = canUseCamera,
+                                canUseCameraAudio = canUseCameraAudio,
+                                currentRecordedVideoUri = currentRecordedVideoUri,
+                                setCurrentRecordedVideoUri = { currentRecordedVideoUri = it },
+                                setCanUseCamera = { canUseCamera = it },
+                                setCanUseCameraAudio = { canUseCameraAudio = it },
+                                removeTale = { tales.remove(it) },
+                                lensFacing = lensFacing,
+                                setLensFacing = { lensFacing = it }
                             )
                         }
 
-                        composable<Glimpse> { backStackEntry ->
+                        composable<Tale> { backStackEntry ->
                             with(windowInsetsController) {
                                 hide(WindowInsetsCompat.Type.systemBars())
                                 systemBarsBehavior =
                                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                             }
 
-                            val glimpse: Glimpse = backStackEntry.toRoute()
+                            val tale: Tale = backStackEntry.toRoute()
 
-                            GlimpseWatchPlayer(
-                                glimpse = glimpse,
-                            ) {
-                                navController.navigate(route = MainApp)
-                            }
+                            // TODO: can we move this somewhere else
+                            val exoPlayer = ExoPlayer.Builder(LocalContext.current)
+                                .setHandleAudioBecomingNoisy(true)
+                                .build()
+
+                            TalePlayer(
+                                uri = tale.video.getUri(LocalContext.current),
+                                exoPlayer,
+                                R.layout.tale_watch_player_view,
+                                onVideoEndOrClose = {
+                                    navController.navigate(route = MainApp)
+                                }
+                            )
                         }
+
                         composable<Settings> {
                             YouDoUSettings()
                         }
@@ -265,29 +297,35 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouDoUScaffold(
-    glimpses: List<Glimpse> = listOf(),
-    onClickGlimpse: (Glimpse) -> Unit,
+    tales: List<Tale>,
+    removeTale: (Tale) -> Unit,
+    onClickTale: (Tale) -> Unit,
     onClickSettings: () -> Unit,
+    lensFacing: Int,
+    setLensFacing: (Int) -> Unit,
+    isRecording: Boolean,
+    recordingTimeout: Long,
+    setRecordingTimeout: (Long) -> Unit,
+    decrementRecordingTimeout: () -> Unit,
     activity: MainActivity?,
-    canUseCameraCallback: MutableState<Boolean>,
-    canUseCameraAudioCallback: MutableState<Boolean>,
-    uri: MutableState<Uri?>,
-    isPremium: Boolean
+    canUseCamera: Boolean,
+    canUseCameraAudio: Boolean,
+    setCanUseCamera: (Boolean) -> Unit,
+    setCanUseCameraAudio: (Boolean) -> Unit,
+    currentRecordedVideoUri: Uri?,
+    setCurrentRecordedVideoUri: (Uri?) -> Unit,
+    toggleRecording: () -> Unit,
 ) {
     var start = AppDestinations.VIEW
     var pagerState = rememberPagerState(initialPage = start.pageNumber) {
         AppDestinations.entries.size
     }
 
-    var recording = remember { mutableStateOf(false) }
-    var secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) }
-    val atEnd = remember { mutableStateOf(false) }
-
     // TODO: put this in our state manager util class
-    LaunchedEffect(secondsUntilCanRecordAgain.longValue) {
-        if (secondsUntilCanRecordAgain.longValue > 0) {
-            delay(1000L)
-            secondsUntilCanRecordAgain.longValue -= 1
+    LaunchedEffect(recordingTimeout) {
+        if (recordingTimeout > 0) {
+            delay(1000L)// TODO: constant for seconds
+            decrementRecordingTimeout()
         }
     }
 
@@ -306,13 +344,13 @@ fun YouDoUScaffold(
             // TODO: secondsUntilRecordAgain should be callback
             YouDoUTopBar(
                 onClickSettings = onClickSettings,
-                secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
+                recordingTimeout = recordingTimeout,
                 scrollBehavior = scrollBehavior
             )
         }) { innerPadding ->
         HorizontalPager(
             state = pagerState, modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = !recording.value
+            userScrollEnabled = !isRecording
         ) { page ->
             when (page) {
                 // TODO: when can get rid of a lot of these arguments with callbacks
@@ -324,15 +362,21 @@ fun YouDoUScaffold(
                         topBarState.heightOffset = heightOffset
                     }
 
-                    GlimpseCamera(
+                    TaleCamera(
                         contentPadding = innerPadding,
-                        canUseCamera = canUseCameraCallback,
-                        canUseCameraAudio = canUseCameraAudioCallback,
-                        secondsUntilCanRecordAgain = secondsUntilCanRecordAgain,
-                        isRecording = recording,
-                        atEnd = atEnd,
-                        uri = uri,
-                        activity = activity
+                        lensFacing = lensFacing,
+                        setLensFacing = setLensFacing,
+                        canUseCamera = canUseCamera,
+                        canUseCameraAudio = canUseCameraAudio,
+                        setCanUseCamera = setCanUseCamera,
+                        setCanUseCameraAudio = setCanUseCameraAudio,
+                        recordingTimeout = recordingTimeout,
+                        isRecording = isRecording,
+                        currentRecordedVideoUri = currentRecordedVideoUri,
+                        setCurrentRecordedVideoUri = setCurrentRecordedVideoUri,
+                        activity = activity,
+                        setRecordingTimeout = setRecordingTimeout,
+                        toggleRecording = toggleRecording
                     )
                 }
 
@@ -342,32 +386,19 @@ fun YouDoUScaffold(
                         heightOffsetTarget = topBarState.heightOffset
                     }
 
-                    GlimpseGrid(
+                    TaleGrid(
                         modifier = Modifier,
-                        isPremium = isPremium,
-                        glimpses = glimpses.toMutableList(),
+                        tales = tales,
                         contentPadding = innerPadding,
-                        onClickGlimpse = onClickGlimpse,
-                        scrollBehavior = scrollBehavior
+                        onClickTale = onClickTale,
+                        scrollBehavior = scrollBehavior,
+                        removeTale = removeTale
                     )
                 }
             }
         }
 
     }
-}
-
-private fun Color.gradient(): Brush {
-    return Brush.verticalGradient(
-        colors = listOf(
-            copy(alpha = 1f),
-            copy(alpha = .8f),
-            copy(alpha = .7f),
-            copy(alpha = .5f),
-            copy(alpha = .3f),
-        ),
-        startY = 0f,
-    )
 }
 
 // TODO: ui check top-bar, settings, glimpse videos, glimpse player
@@ -377,7 +408,7 @@ private fun Color.gradient(): Brush {
 @Composable
 fun YouDoUTopBar(
     onClickSettings: () -> Unit = { },
-    secondsUntilCanRecordAgain: MutableState<Long>,
+    recordingTimeout: Long,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val color = MaterialTheme.colorScheme.primaryContainer
@@ -394,11 +425,11 @@ fun YouDoUTopBar(
                 val iconPadding = 10.dp
 
                 Text(
-                    text = secondsUntilCanRecordAgain.value.formatTimeSeconds(),
+                    text = recordingTimeout.formatTimeSeconds(),
                     modifier = Modifier
                         .padding(iconPadding)
                         .alpha(
-                            if (secondsUntilCanRecordAgain.value > 0) 1f else 0f
+                            if (recordingTimeout > 0) 1f else 0f
                         ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.error
@@ -512,14 +543,24 @@ fun YouDoUSettings() {
 @Preview
 fun PreviewScaffold() {
     YouDoUScaffold(
-        glimpses = previewGlimpses,
-        onClickGlimpse = { },
+        tales = previewTales,
+        removeTale = { },
+        onClickTale = { },
         onClickSettings = { },
+        lensFacing = LENS_FACING_FRONT,
+        setLensFacing = { },
+        isRecording = false,
+        recordingTimeout = 0L,
+        setRecordingTimeout = { },
+        decrementRecordingTimeout = { },
         activity = null,
-        canUseCameraCallback = remember { mutableStateOf(true) },
-        canUseCameraAudioCallback = remember { mutableStateOf(true) },
-        uri = remember { mutableStateOf(null) },
-        isPremium = false
+        canUseCamera = true,
+        canUseCameraAudio = true,
+        setCanUseCamera = { },
+        setCanUseCameraAudio = { },
+        currentRecordedVideoUri = null,
+        setCurrentRecordedVideoUri = { },
+        toggleRecording = { }
     )
 }
 
@@ -528,7 +569,7 @@ fun PreviewScaffold() {
 @Composable
 fun PreviewYouDoUTopBar() {
     YouDoUTopBar(
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(100L) },
+        recordingTimeout = 123L,
         scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     )
 }

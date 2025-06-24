@@ -1,4 +1,4 @@
-package net.youdou
+package net.youdou.util
 
 enum class AppDestinations(
     val pageNumber: Int

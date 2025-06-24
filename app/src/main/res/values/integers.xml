@@ -47,7 +47,7 @@
     <integer name="username_min_length">5</integer>
     <integer name="far_seconds">28800</integer>
     <integer name="medium_seconds">3600</integer>
-    <integer name="glimpse_record_delay">86400</integer>
+    <integer name="tale_record_delay">86400</integer>
     <integer name="heart_repeat_amount">35</integer>
     <integer name="heart_shown_duration">2000</integer>
     <integer name="heart_duration_before_explosion">495</integer>

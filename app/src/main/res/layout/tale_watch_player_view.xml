@@ -6,7 +6,7 @@
     android:background="#000000"
     android:keepScreenOn="true"
     app:auto_show="false"
-    app:show_timeout="2200"
-    app:controller_layout_id="@layout/glimpse_watch_player_control_view">
+    app:controller_layout_id="@layout/tale_watch_player_control_view"
+    app:show_timeout="2200">
 
 </androidx.media3.ui.PlayerView>

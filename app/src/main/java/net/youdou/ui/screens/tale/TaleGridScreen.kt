@@ -1,10 +1,7 @@
-package net.youdou.ui.glimpse
+package net.youdou.ui.screens.tale
 
-import android.content.ContentResolver
 import android.content.Context
-import android.net.Uri
 import android.os.Build
-import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.AnimatedContent
@@ -35,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -46,43 +42,30 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.integerResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowSizeClass
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.composed
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -90,25 +73,35 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
-import net.youdou.R
+import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import net.youdou.R
 import net.youdou.ui.theme.HeartRed
-import java.util.Locale
+import net.youdou.util.DetailPaneBreakpoint
+import net.youdou.util.Digit
+import net.youdou.util.HeartState
+import net.youdou.util.compareTo
+import net.youdou.util.formatTimeSeconds
+import net.youdou.util.previewTales
+import net.youdou.util.vibrate
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.seconds
 
 @Serializable
-data class Glimpse(
+data class Tale(
     val duration: Int,
     val thumbnail: Int,
     val contentDescription: Int,
@@ -121,40 +114,58 @@ data class Glimpse(
 data class DropDownItem(
     val text: String, val isError: Boolean, val onItemClick: () -> Unit
 )
+// TODO: add this to resource manager?
+val DROP_DOWN_ITEMS = listOf(
+    DropDownItem("Report", isError = true, onItemClick = { }),
+    DropDownItem("Length: $TALE_DURATION_SPECIFIER", isError = false, onItemClick = { }),
+)
+
+const val TALE_DURATION_SPECIFIER = "%tale_duration"
 
 // TODO: live heart updates!!! this should have an animation too, keeps us all connected
 // TODO: the heart count could update in sync with the shake so we aren't spamming updates on screen
 // TODO: we could also just not shake unless the user is doing it themselves
-// TODO: we could only show hearts once the glimpse reaches certain milestones: 1, 5, 10, 20, 40,
+// TODO: we could only show hearts once the tale reaches certain milestones: 1, 5, 10, 20, 40,
 //  100, 200, 300, 400, 500, etc.
-
-// TODO: 2 new hearts on the time of buying basic membership. add hearts to all accounts every 24
-//  hours
 
 // TODO: like animation
 // TODO: like pop-up with heart count
 
-// TODO: report feature done
+// TODO: report feature done. nsfw scanning done
 
-// TODO: have a way to see how many times you hearted a glimpse. should you be able to heart more
+// TODO: have a way to see how many times you hearted a tale. should you be able to heart more
 //  than
 //  once? i think so
 
-// TODO: have a way for users to see how many times people liked and viewed their glimpse. this
+// TODO: more organized previews
+
+// TODO: torrent like video sharing so i don't have to buy a server
+// TODO: is this allowed in every country?
+// TODO: maybe i can use a library for it
+// TODO: i could do it in python
+
+// TODO: animation when you get a new heart at the start of the day
+
+// TODO: test record and watch player to see if they r working after consolidated classes
+
+// TODO: have a way for users to see how many times people liked and viewed their tale. this
 //  is VERY IMPORTANT
+
+// TODO: keep app data saved when tabbing out. rememberSaveable
 
 // TODO: label all animations
 
-// TODO: 9.99/month for extra features from the base tier. things like beta-testing. this should
-//  not be better than base tier in terms of content
-// TODO: sales
+// TODO: rememberSaveable to preserve state between screen rotations
+//  https://developer.android.com/develop/ui/compose/state#restore-ui-state
 
 // TODO: disable spaces in copy and paste with text field for login
-// TODO: maintain video location after exiting glimpse
+// TODO: maintain video location after exiting tale
 // TODO: don't reset app when orientation changed
-// TODO: remove glimpse after watched
+// TODO: remove tale after watched
 
 // TODO: Skipped 31 frames!  The application may be doing too much work on its main thread.
+
+// TODO: make sure status bar does not show when exiting tale
 
 // TODO: In Jetpack Compose, you should never pass a MutableState<T> as parameter to other
 //  Composables, as this violates the unidirectional data flow pattern.
@@ -167,9 +178,10 @@ data class DropDownItem(
 
 // TODO: new NavHost transition
 
+// TODO: title for Tales above tale grid
+
 // TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
 //  spigot
-
 
 // TODO: watermark for videos made. probably can be done through bunny
 
@@ -226,30 +238,21 @@ data class DropDownItem(
 // TODO: better login form error messages. model from Cloudflare login
 // TODO: clean up login form, specifically the labels for text fields
 
-// TODO: landscape mode remove overlapping camera ON glimpse view AND player view
+// TODO: landscape mode remove overlapping camera ON tale view AND player view
 
 // TODO: logo
 // TODO; playful, animated, baldi's basics vibe
 
-// TODO: admob
-
 // TODO: ask nico about beta testing.
-// TODO: button to reset app state for beta testers, e.g. reset recording timer or default glimpses
+// TODO: button to reset app state for beta testers, e.g. reset recording timer or default tales
 
 // TODO: subreddit
+// TODO: idea of app is to encourage conversation
 
-// TODO: improve record glimpse UI
+// TODO: improve record tale UI
 // TODO: redo button shadows and length
 
 // TODO: better accessibility content descriptions
-// TODO: big plus button in empty glimpse at the bottom so people have a way to purchase premium
-
-// TODO: one purchasable thing only: premium!
-// TODO: make popup to show benefits of premium. this could be a nice pop-up composable in the
-//  middle of the screen
-// TODO: i later decided that there should be two purchasable things. except premium+ would not
-//  provide any in app advantages to premium, maybe just something for avid supporters of the app
-//  . could have beta testing
 
 // TODO: find a way to reduce minsdk. all people should be able to use the app :)
 
@@ -259,118 +262,11 @@ data class DropDownItem(
 // TODO: shake animation for ui. login and heart updates
 // https://www.sinasamaki.com/shake-animations-compose/
 
-const val GLIMPSE_DURATION_SPECIFIER = "%glimpse_duration"
+// TODO: test out all new callables
 
-val dropDownItems = listOf(
-    DropDownItem("Report", isError = true, onItemClick = { }),
-    DropDownItem("Length: $GLIMPSE_DURATION_SPECIFIER", isError = false, onItemClick = { }),
-)
-
-var previewGlimpses = listOf(
-    Glimpse(
-        duration = R.integer.preview_1_duration,
-        thumbnail = R.drawable.preview_1,
-        contentDescription = R.string.preview_1_content_description,
-        time = R.string.preview_1_date,
-        video = R.raw.preview_1,
-        secondsUntilExpiration = R.integer.preview_1_seconds_until_expiration,
-        hearts = R.integer.preview_1_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_2_duration,
-        thumbnail = R.drawable.preview_2,
-        contentDescription = R.string.preview_2_content_description,
-        time = R.string.preview_2_date,
-        video = R.raw.preview_2,
-        secondsUntilExpiration = R.integer.preview_2_seconds_until_expiration,
-        hearts = R.integer.preview_2_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_3_duration,
-        thumbnail = R.drawable.preview_3,
-        contentDescription = R.string.preview_3_content_description,
-        time = R.string.preview_3_date,
-        video = R.raw.preview_3,
-        secondsUntilExpiration = R.integer.preview_3_seconds_until_expiration,
-        hearts = R.integer.preview_3_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_4_duration,
-        thumbnail = R.drawable.preview_4,
-        contentDescription = R.string.preview_4_content_description,
-        time = R.string.preview_4_date,
-        video = R.raw.preview_4,
-        secondsUntilExpiration = R.integer.preview_4_seconds_until_expiration,
-        hearts = R.integer.preview_4_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_5_duration,
-        thumbnail = R.drawable.preview_5,
-        contentDescription = R.string.preview_5_content_description,
-        time = R.string.preview_5_date,
-        video = R.raw.preview_5,
-        secondsUntilExpiration = R.integer.preview_5_seconds_until_expiration,
-        hearts = R.integer.preview_5_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_6_duration,
-        thumbnail = R.drawable.preview_6,
-        contentDescription = R.string.preview_6_content_description,
-        time = R.string.preview_6_date,
-        video = R.raw.preview_6,
-        secondsUntilExpiration = R.integer.preview_6_seconds_until_expiration,
-        hearts = R.integer.preview_6_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_7_duration,
-        thumbnail = R.drawable.preview_1,
-        contentDescription = R.string.preview_7_content_description,
-        time = R.string.preview_7_date,
-        video = R.raw.preview_7,
-        secondsUntilExpiration = R.integer.preview_7_seconds_until_expiration,
-        hearts = R.integer.preview_7_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_8_duration,
-        thumbnail = R.drawable.preview_8,
-        contentDescription = R.string.preview_8_content_description,
-        time = R.string.preview_8_date,
-        video = R.raw.preview_8,
-        secondsUntilExpiration = R.integer.preview_8_seconds_until_expiration,
-        hearts = R.integer.preview_8_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_9_duration,
-        thumbnail = R.drawable.preview_9,
-        contentDescription = R.string.preview_9_content_description,
-        time = R.string.preview_9_date,
-        video = R.raw.preview_9,
-        secondsUntilExpiration = R.integer.preview_9_seconds_until_expiration,
-        hearts = R.integer.preview_9_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_10_duration,
-        thumbnail = R.drawable.preview_10,
-        contentDescription = R.string.preview_10_content_description,
-        time = R.string.preview_10_date,
-        video = R.raw.preview_10,
-        secondsUntilExpiration = R.integer.preview_10_seconds_until_expiration,
-        hearts = R.integer.preview_10_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_11_duration,
-        thumbnail = R.drawable.preview_11,
-        contentDescription = R.string.preview_11_content_description,
-        time = R.string.preview_11_date,
-        video = R.raw.preview_11,
-        secondsUntilExpiration = R.integer.preview_11_seconds_until_expiration,
-        hearts = R.integer.preview_11_hearts,
-    ), Glimpse(
-        duration = R.integer.preview_12_duration,
-        thumbnail = R.drawable.preview_12,
-        contentDescription = R.string.preview_12_content_description,
-        time = R.string.preview_12_date,
-        video = R.raw.preview_12,
-        secondsUntilExpiration = R.integer.preview_12_seconds_until_expiration,
-        hearts = R.integer.preview_12_hearts,
-    )
-)
-
-// TODO: glimpse expiring animation. make it like fly away. also make times of glimpse 2 hours
-//  apart with first glimpse having time of like 10 seconds
+// TODO: tale expiring animation. make it like fly away. also make times of tale 2 hours
+//  apart with first tale having time of like 10 seconds
 // TODO: disable haptics in settings
-// TODO: clicking hearts and plus at bottom should prompt to buy new things, we don't need a
-//  store tab
 // TODO: introduction tutorial
 // TODO: force ui check before pushing code
 // TODO: fix dark mode in ui check. also look through dark mode needs to be better
@@ -379,6 +275,8 @@ var previewGlimpses = listOf(
 // TODO: adjust in-out animation. learn how to use animation manager
 // TODO: fix ui check FOR EVERYTHING
 // TODO: unit testing -- espresso
+
+// TODO: add bottom navbar again
 
 // TODO: make code look better, clean it up! more functions!
 // TODO: we should not get lost in the code!
@@ -404,12 +302,12 @@ var previewGlimpses = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GlimpseGrid(
+fun TaleGrid(
     modifier: Modifier,
-    glimpses: MutableList<Glimpse>,
+    tales: List<Tale>,
+    removeTale: (Tale) -> Unit,
     contentPadding: PaddingValues,
-    onClickGlimpse: (Glimpse) -> Unit,
-    isPremium: Boolean,
+    onClickTale: (Tale) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -453,27 +351,21 @@ fun GlimpseGrid(
         verticalArrangement = Arrangement.spacedBy(arrangementPadding)
     ) {
         items(
-            items = if (!isPremium) glimpses.take(6) else glimpses,
+            items = tales
         ) {
-            GlimpseCard(
+            TaleCard(
                 modifier = Modifier,
-                glimpse = it,
-                onClickGlimpse = onClickGlimpse,
-                onRemoveGlimpse = { glimpse ->
-                    // TODO: glimpses expiring
-                    // glimpses.remove(glimpse)
+                tale = it,
+                onClickTale = onClickTale,
+                onRemoveTale = { tale ->
+                    removeTale(tale)
                 })
-        }
-        if (!isPremium) {
-            item {
-                GlimpsePurchaseCard(modifier = Modifier)
-            }
         }
     }
 }
 
 @Composable
-private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit)) {
+private fun TaleCardBase(modifier: Modifier, content: @Composable (() -> Unit)) {
     Surface(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
@@ -486,63 +378,22 @@ private fun GlimpseCardBase(modifier: Modifier, content: @Composable (() -> Unit
     }
 }
 
-// TODO: clickable purchase card that prompts to buy composable with premium and premium+
 @Composable
-fun GlimpsePurchaseCard(
+fun TaleCard(
     modifier: Modifier,
+    tale: Tale,
+    onClickTale: (Tale) -> Unit,
+    onRemoveTale: (Tale) -> Unit,
 ) {
-    // hard-coded
-    val cornerRadiusDp = 15.dp
-
-    GlimpseCardBase(modifier) {
-        Box(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(4.dp)
-                .clip(MaterialTheme.shapes.large)
-                .dashedBorder(
-                    strokeWidth = 7.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    cornerRadiusDp = cornerRadiusDp
-                )
-                .clickable {
-
-                },
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.outline_add),
-                contentDescription = stringResource(R.string.glimpse_purchase_content_description),
-                modifier = Modifier
-                    .graphicsLayer(1f)
-                    .size(200.dp)
-                    .align(Alignment.Center),
-                tint = MaterialTheme.colorScheme.secondary
-            )
-
-            Image(
-                painter = painterResource(R.drawable.transparent_background),
-                contentDescription = stringResource(R.string.glimpse_purchase_content_description),
-                alpha = 0f
-            )
-        }
-    }
-}
-
-@Composable
-fun GlimpseCard(
-    modifier: Modifier,
-    glimpse: Glimpse,
-    onClickGlimpse: (Glimpse) -> Unit,
-    onRemoveGlimpse: (Glimpse) -> Unit,
-) {
-    var isContextMenuVisible = remember { mutableStateOf(false) }
-    var contextMenuOffset = remember { mutableStateOf(Offset.Zero) }
+    var isContextMenuVisible by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
 
     // TODO: better var names
     var width by remember { mutableIntStateOf(1) }
     var height by remember { mutableIntStateOf(1) }
 
     // TODO: better variable names
+    // TODO: mutable state callables
     var startOffset by remember { mutableStateOf(Offset.Zero) }
     var bubbling by remember { mutableStateOf(HeartState.END) }
     var explode by remember { mutableStateOf(false) }
@@ -577,7 +428,7 @@ fun GlimpseCard(
         }
     }
 
-    GlimpseCardBase(
+    TaleCardBase(
         modifier = modifier
             .onGloballyPositioned {
                 width = max(abs(it.size.width), 1)
@@ -586,7 +437,13 @@ fun GlimpseCard(
             .offset(x = cardShake.x.dp, y = cardShake.y.dp)
     ) {
         Box {
-            YouDoUDropDown(dropDownItems, isContextMenuVisible, contextMenuOffset, glimpse)
+            YouDoUDropDown(
+                dropDownItems = DROP_DOWN_ITEMS,
+                isContextMenuVisible = isContextMenuVisible,
+                setContextMenuVisible = { isContextMenuVisible = it },
+                contextMenuOffset = contextMenuOffset,
+                tale = tale,
+            )
         }
 
         val farSeconds = integerResource(R.integer.far_seconds)
@@ -604,7 +461,7 @@ fun GlimpseCard(
             val behindColor = MaterialTheme.colorScheme.surface
 
             Box {
-                val secs = integerResource(glimpse.secondsUntilExpiration).toLong()
+                val secs = integerResource(tale.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
 
                 val expirationColor = if (!isSystemInDarkTheme()) {
@@ -624,10 +481,11 @@ fun GlimpseCard(
                 // TODO: make this constant ?
                 val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
+                // TODO: split into it's own composable
                 // gray expiration bar and thumbnail
                 Image(
-                    painter = painterResource(glimpse.thumbnail),
-                    contentDescription = stringResource(glimpse.contentDescription),
+                    painter = painterResource(tale.thumbnail),
+                    contentDescription = stringResource(tale.contentDescription),
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.medium)
                         .drawWithContent {
@@ -641,27 +499,28 @@ fun GlimpseCard(
                             }
                         }
                         .combinedClickable(true, onClick = {
-                            onClickGlimpse(glimpse)
+                            onClickTale(tale)
                         }, onLongClick = {
-                            isContextMenuVisible.value = true
+                            isContextMenuVisible = true
                         })
                         .pointerInteropFilter {
-                            contextMenuOffset.value = Offset(it.x, it.y)
+                            contextMenuOffset= Offset(it.x, it.y)
                             false
                         }
                 )
 
-                // TODO: change when expiration data isn't hardcoded
+                // TODO: change when expiration data isn't hardcoded. api connection
                 LaunchedEffect(Unit) {
                     while (expirationSeconds > 0) {
                         delay(1000L)
                         expirationSeconds -= 1
                     }
 
-                    onRemoveGlimpse(glimpse)
+                    onRemoveTale(tale)
                     cancel()
                 }
 
+                // TODO: split into its own composable
                 // time
                 Box(
                     modifier = Modifier
@@ -680,7 +539,7 @@ fun GlimpseCard(
                     )
                 }
 
-                val heartsVal = integerResource(glimpse.hearts)
+                val heartsVal = integerResource(tale.hearts)
                 var hearts by remember { mutableIntStateOf(heartsVal) }
 
                 val context = LocalContext.current
@@ -693,12 +552,14 @@ fun GlimpseCard(
                     @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
 
+                // TODO: split into it's own composable
                 // hearts
                 Box(
                     modifier = Modifier
                         .clip(behindShape)
                         .clickable {
                             if (!transition.isRunning) {
+                                // TODO: mutable state callable maybe?
                                 hearts++
 
                                 bubbling = HeartState.BEGIN
@@ -774,6 +635,7 @@ fun GlimpseCard(
                                     AnimatedContent(
                                         targetState = digit,
                                         transitionSpec = {
+                                            // TODO: how to make this be just greater than sign
                                             if (targetState > initialState) {
                                                 slideInVertically { -it } togetherWith slideOutVertically { it }
                                             } else {
@@ -803,7 +665,7 @@ fun GlimpseCard(
             }
 
             Text(
-                text = stringResource(glimpse.time),
+                text = stringResource(tale.time),
                 style = textStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
@@ -844,6 +706,7 @@ fun GlimpseCard(
         }
 
         // these happen in succession
+
 
         LaunchedEffect(explode) {
             if (explode == true) {
@@ -916,6 +779,7 @@ fun GlimpseCard(
 }
 
 // TODO: constants for these randoms?
+// TODO: make explode look better
 private fun List<Offset>.makeHeartTargets(
     width: Int, height: Int
 ) = map {
@@ -926,50 +790,25 @@ private fun List<Offset>.makeHeartTargets(
     )
 }
 
-// TODO: hold vibration then EXPLODE! sync this with hearts
-private fun vibrate(vibrator: Vibrator) {
-    // must have equal amount in each array
-    // TODO: unit test to ensure array have equal length?
-
-    val intensity = 3
-    val spread = 1
-
-    // TODO: find way to ensure same size, maybe we could just make a pairing data class
-    val timings: LongArray = longArrayOf(
-        35, 35, 35, 60, 35, 35, 35, 35, 60, 35, 35, 35, 60, 35, 35, 35, 35, 35, 35, 35, 35, 35
-    ).map {
-        it * spread
-    }.toLongArray()
-
-    val amplitudes: IntArray = intArrayOf(
-        10, 15, 10, 15, 10, 15, 10, 15, 10, 15, 10, 15, 26, 35, 42, 41, 38, 35, 30, 25, 19, 12,
-    ).map {
-        it * intensity
-    }.toIntArray()
-
-    val repeatIndex = -1 // Do not repeat.
-
-    vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, repeatIndex))
-}
-
 @Composable
 fun YouDoUDropDown(
     dropDownItems: List<DropDownItem>,
-    isContextMenuVisible: MutableState<Boolean>,
-    contextMenuOffset: MutableState<Offset>,
-    glimpse: Glimpse
+    isContextMenuVisible: Boolean,
+    setContextMenuVisible: (Boolean) -> Unit,
+    contextMenuOffset: Offset,
+    tale: Tale
 ) {
     val density = LocalDensity.current
     val dpOffset = with(density) {
         DpOffset(
-            contextMenuOffset.value.x.toDp(), contextMenuOffset.value.y.toDp()
+            contextMenuOffset.x.toDp(), contextMenuOffset.y.toDp()
         )
     }
 
     DropdownMenu(
-        expanded = isContextMenuVisible.value,
+        expanded = isContextMenuVisible,
         onDismissRequest = {
-            isContextMenuVisible.value = false
+            setContextMenuVisible(false)
         },
         offset = dpOffset,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -980,12 +819,12 @@ fun YouDoUDropDown(
         dropDownItems.forEach {
             DropdownMenuItem(onClick = {
                 it.onItemClick()
-                isContextMenuVisible.value = false
+                setContextMenuVisible(false)
             }, text = {
                 Text(
                     text = it.text.replace(
-                        GLIMPSE_DURATION_SPECIFIER,
-                        integerResource(glimpse.duration).toLong()
+                        TALE_DURATION_SPECIFIER,
+                        integerResource(tale.duration).toLong()
                             .formatTimeSeconds(appendZero = false)
                     ),
                     color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
@@ -996,156 +835,57 @@ fun YouDoUDropDown(
     }
 }
 
-enum class HeartState {
-    BEGIN, END
-}
-
-enum class DetailPaneBreakpoint {
-    COMPACT, MEDIUM, EXPANDED
-}
-
-data class Digit(val digitChar: Char, val fullNumber: Int, val place: Int) {
-    override fun equals(other: Any?): Boolean {
-        return when (other) {
-            is Digit -> digitChar == other.digitChar
-            else -> super.equals(other)
-        }
-    }
-
-    override fun hashCode(): Int {
-        var result = digitChar.hashCode()
-        result = 31 * result + fullNumber
-        result = 31 * result + place
-        return result
-    }
-}
-
-operator fun Digit.compareTo(other: Digit): Int {
-    return fullNumber.compareTo(other.fullNumber)
-}
-
-
-// TODO: fix this guy right here
-// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
-//  classes are referencing this which is why im asking
-private fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadiusDp: Dp) = composed(
-    factory = {
-        val density = LocalDensity.current
-        val strokeWidthPx = density.run { strokeWidth.toPx() }
-        val cornerRadiusPx = density.run { cornerRadiusDp.toPx() }
-
-        this.then(
-            Modifier.drawWithCache {
-                onDrawBehind {
-                    val stroke = Stroke(
-                        width = strokeWidthPx,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(25f, 15f), 0f)
-                    )
-
-                    drawRoundRect(
-                        color = color, style = stroke, cornerRadius = CornerRadius(cornerRadiusPx)
-                    )
-                }
-            })
-    })
-
-// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
-//  classes are referencing this which is why im asking
-fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
-    return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
-        StringBuilder().apply {
-            if (hours > 1) {
-                append(
-                    String.format(
-                        Locale.US, "%d hours", hours
-                    )
-                )
-            } else if (hours == 1L) {
-                append(
-                    String.format(
-                        Locale.US, "%d hour", hours
-                    )
-                )
-            } else {
-                val specifier = if (appendZero) "%02d:%02d" else "%d:%02d"
-                append(
-                    String.format(
-                        Locale.US, specifier, minutes, seconds
-                    )
-                )
-            }
-        }.toString()
-    }
-}
-
-// TODO: where should this go? should it be in a Util class? or do we just leave it here? other
-//  classes are referencing this which is why im asking
-fun Int.getUri(context: Context): Uri {
-    val item = this
-    return with(context.resources) {
-        Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-            .authority(getResourcePackageName(item)).appendPath(getResourceTypeName(item))
-            .appendPath(getResourceEntryName(item)).build()
-    }
-}
-
 @Preview
 @Composable
-fun PreviewGlimpseCardSoon() {
-    var glimpse = previewGlimpses[1]
+fun PreviewTaleCardSoon() {
+    var tale = previewTales[1]
 
-    GlimpseCard(
+    TaleCard(
         modifier = Modifier,
-        glimpse = glimpse,
-        onClickGlimpse = { },
-        onRemoveGlimpse = { },
+        tale = tale,
+        onClickTale = { },
+        onRemoveTale = { },
     )
 }
 
 @Preview
 @Composable
-fun PreviewGlimpseCardMedium() {
-    var glimpse = previewGlimpses[2]
+fun PreviewTaleCardMedium() {
+    var tale = previewTales[2]
 
-    GlimpseCard(
+    TaleCard(
         modifier = Modifier,
-        glimpse = glimpse,
-        onClickGlimpse = { },
-        onRemoveGlimpse = { },
+        tale = tale,
+        onClickTale = { },
+        onRemoveTale = { },
     )
 }
 
 @Preview
 @Composable
-fun PreviewGlimpseCardFar() {
-    var glimpse = previewGlimpses[4]
+fun PreviewTaleCardFar() {
+    var tale = previewTales[4]
 
-    GlimpseCard(
+    TaleCard(
         modifier = Modifier,
-        glimpse = glimpse,
-        onClickGlimpse = { },
-        onRemoveGlimpse = { },
+        tale = tale,
+        onClickTale = { },
+        onRemoveTale = { },
     )
 }
 
-@Preview
-@Composable
-fun PreviewGlimpsePurchaseCard() {
-    GlimpsePurchaseCard(modifier = Modifier)
-}
-
-// TODO: no supressions!
+// TODO: no suppressions!
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
 @Preview
 @Composable
-fun PreviewGlimpseGrid() {
-    GlimpseGrid(
+fun PreviewTaleGrid() {
+    TaleGrid(
         modifier = Modifier,
-        glimpses = previewGlimpses.toMutableList(),
+        tales = previewTales.toMutableList(),
         contentPadding = PaddingValues(4.dp),
-        onClickGlimpse = { },
-        isPremium = false,
+        onClickTale = { },
+        removeTale = { },
         scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     )
 }

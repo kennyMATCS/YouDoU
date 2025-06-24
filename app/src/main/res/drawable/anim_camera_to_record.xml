@@ -8,7 +8,8 @@
             android:viewportWidth="960"
             android:viewportHeight="960">
 
-            <group android:name="pathRedInnerGroup"
+            <group
+                android:name="pathRedInnerGroup"
                 android:pivotX="480"
                 android:pivotY="480">
                 <!-- Centered rounded square path -->
@@ -74,22 +75,22 @@
             <set>
                 <objectAnimator
                     android:duration="900"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
                     android:propertyName="rotation"
                     android:valueFrom="0"
-                    android:valueTo="360"
-                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                    android:valueTo="360" />
                 <objectAnimator
                     android:duration="600"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
                     android:propertyName="scaleX"
                     android:valueFrom="0"
-                    android:valueTo="1"
-                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                    android:valueTo="1" />
                 <objectAnimator
                     android:duration="600"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
                     android:propertyName="scaleY"
                     android:valueFrom="0"
-                    android:valueTo="1"
-                    android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                    android:valueTo="1" />
             </set>
         </aapt:attr>
     </target>

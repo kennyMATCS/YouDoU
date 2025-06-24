@@ -1,4 +1,4 @@
-package net.youdou.ui.glimpse.record
+package net.youdou.ui.screens.tale
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -11,6 +11,7 @@ import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraSelector.LENS_FACING_BACK
 import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+import androidx.camera.core.CameraSelector.LENS_FACING_UNKNOWN
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
@@ -41,8 +42,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,12 +51,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableIntState
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -70,59 +68,72 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.delay
 import net.youdou.MainActivity
 import net.youdou.R
-import net.youdou.ui.glimpse.formatTimeSeconds
-import net.youdou.ui.glimpse.getUri
-import net.youdou.ui.glimpse.player.GlimpseRecordPlayer
+import net.youdou.ui.screens.tale.player.TalePlayer
+import net.youdou.util.formatTimeSeconds
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
+// TODO: use this in resource manager
 const val delayBeforeShowingEditor = 1000L
 
+// TODO: review parameters to see if we really need them. specifically, modifier and contentPadding
+// TODO: remove suppressions. split this function up
 @ExperimentalMaterial3Api
 @OptIn(ExperimentalCamera2Interop::class, ExperimentalMaterial3Api::class)
 @Composable
-fun GlimpseCamera(
+fun TaleCamera(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    canUseCamera: MutableState<Boolean>,
-    canUseCameraAudio: MutableState<Boolean>,
-    secondsUntilCanRecordAgain: MutableState<Long>,
-    isRecording: MutableState<Boolean>,
-    atEnd: MutableState<Boolean>,
-    uri: MutableState<Uri?>,
+    lensFacing: Int, // TODO: annotation for lensFacing
+    setLensFacing: (Int) -> Unit,
+    canUseCamera: Boolean,
+    canUseCameraAudio: Boolean,
+    setCanUseCamera: (Boolean) -> Unit,
+    setCanUseCameraAudio: (Boolean) -> Unit,
+    recordingTimeout: Long,
+    isRecording: Boolean,
+    currentRecordedVideoUri: Uri?,
+    setCurrentRecordedVideoUri: (Uri?) -> Unit,
+    toggleRecording: () -> Unit,
     activity: MainActivity?,
+    setRecordingTimeout: (Long) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var recording: MutableState<Recording?> = remember { mutableStateOf(null) }
-    val previewView = PreviewView(context)
-    var lensFacing = remember { mutableIntStateOf(LENS_FACING_FRONT) }
-    val cameraSelector = remember {
+    var recording by remember { mutableStateOf<Recording?>(null) }
+    var cameraSelector by remember {
         mutableStateOf(
             CameraSelector.Builder()
-                .requireLensFacing(lensFacing.intValue)
+                .requireLensFacing(lensFacing)
                 .build()
         )
     }
 
-    val videoCapture: MutableState<VideoCapture<Recorder>?> = remember { mutableStateOf(null) }
-    val cameraProvider: MutableState<ProcessCameraProvider?> = remember { mutableStateOf(null) }
-    val preview: MutableState<Preview?> = remember { mutableStateOf(null) }
+    var videoCapture by remember { mutableStateOf<VideoCapture<Recorder>?>(null) }
+    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    var preview by remember { mutableStateOf<Preview?>(null) }
+    val previewView = PreviewView(context)
+
+    var isConfirmDialogOpen by remember { mutableStateOf(false) }
+    var isTimeoutDialogOpen by remember { mutableStateOf(false) }
+    var isDelayBeforeShowingEditor by remember { mutableStateOf(false) }
 
     // TODO: separate function for me below?
     activity?.let {
         var requestList = mutableListOf<String>()
 
+        // TODO: check permission somewhere else
         checkPermission(
             context = context,
-            state = canUseCamera,
+            setState = setCanUseCamera,
             activity = activity,
             requestList = requestList,
             permission = Manifest.permission.CAMERA,
@@ -130,7 +141,7 @@ fun GlimpseCamera(
 
         checkPermission(
             context = context,
-            state = canUseCameraAudio,
+            setState = setCanUseCameraAudio,
             activity = activity,
             requestList = requestList,
             permission = Manifest.permission.RECORD_AUDIO,
@@ -139,12 +150,10 @@ fun GlimpseCamera(
         activity.requestPermissionLauncher.launch(requestList.toTypedArray())
     }
 
-    var openConfirmDialog = remember { mutableStateOf(false) }
-    var openTimeoutDialog = remember { mutableStateOf(false) }
-
     // TODO: make the bottom two when's neater
     when {
-        openTimeoutDialog.value -> {
+        isTimeoutDialogOpen -> {
+            // TODO: make this its own composable function
             AlertDialog(
                 icon = {
                     Icon(
@@ -165,7 +174,7 @@ fun GlimpseCamera(
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            openTimeoutDialog.value = false
+                            isTimeoutDialogOpen = false
                         }
                     ) {
                         Text("Dismiss")
@@ -173,61 +182,70 @@ fun GlimpseCamera(
                 }
             )
         }
-    }
 
-    when {
-        openConfirmDialog.value -> {
+        isConfirmDialogOpen -> {
+            // TODO: make this its own composable function
             ConfirmDialog(onConfirm = {
                 startRecording(
-                    isRecording, atEnd,
+                    setRecording = { recording = it },
                     videoCapture = videoCapture,
-                    recording = recording,
                     context = context,
-                    uri = uri
+                    setCurrentRecordedVideoUri = setCurrentRecordedVideoUri,
+                    toggleRecording = toggleRecording,
                 )
-            }, openConfirmDialog)
+            }, { isConfirmDialogOpen = false })
         }
+
     }
 
-
-    val isDelayBeforeShowingEditor = remember { mutableStateOf(false) }
-
     // TODO: make this if statement cleaner and more readable
-    if (uri.value != null && !isDelayBeforeShowingEditor.value) {
+    if (currentRecordedVideoUri != null && !isDelayBeforeShowingEditor) {
         Box(
             modifier = modifier
                 .padding(contentPadding)
                 .fillMaxSize()
         ) {
-            GlimpseRecordPlayer(
-                uri = uri.value!!,
+            // TODO: can we move this somewhere else
+            val exoPlayer = ExoPlayer.Builder(LocalContext.current)
+                .setHandleAudioBecomingNoisy(true)
+                .build()
+
+            TalePlayer(
+                uri = currentRecordedVideoUri, // TODO: what are you doing bro
+                exoPlayer,
+                R.layout.tale_record_player_view,
+                onVideoEndOrClose = { }
             )
-            Button(
-                onClick = {
-                    // TODO: upload logic. use callback
-                    uri.value = null
-                },
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
-                modifier = Modifier
-                    .padding(6.dp)
-                    .align(Alignment.BottomEnd)
-            ) {
-                Text(stringResource(R.string.glimpse_upload_text))
-            }
+
+            // TODO: add back. make look actually good
+//            Button(
+//                onClick = {
+//                    // TODO: upload logic. use callback
+//                    // TODO: set uri to be null
+//                },
+//                shape = MaterialTheme.shapes.medium,
+//                colors = ButtonDefaults.buttonColors(
+//                    contentColor = MaterialTheme.colorScheme.primary,
+//                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+//                ),
+//                modifier = Modifier
+//                    .padding(6.dp)
+//                    .align(Alignment.BottomEnd)
+//            ) {
+//                Text(stringResource(R.string.tale_upload_text))
+//            }
         }
     } else {
-        if (canUseCamera.value && canUseCameraAudio.value) {
+        if (canUseCamera && canUseCameraAudio) {
             LaunchedEffect(Unit) {
-                videoCapture.value = context.createVideoCaptureUseCase(
+                videoCapture = context.createVideoCaptureUseCase(
                     lifecycleOwner = lifecycleOwner,
-                    cameraSelector = cameraSelector.value,
+                    cameraSelector = cameraSelector,
                     previewView = previewView,
                     cameraProvider = cameraProvider,
-                    preview = preview
+                    setCameraProvider = { cameraProvider = it },
+                    preview = preview,
+                    setPreview = { preview = it }
                 )
             }
 
@@ -236,25 +254,27 @@ fun GlimpseCamera(
                     .padding(contentPadding)
                     .fillMaxSize()
             ) {
-                AndroidView(factory = { previewView }, modifier = modifier.fillMaxSize())
+                AndroidView(
+                    factory = { previewView },
+                    modifier = modifier.fillMaxSize()
+                )
 
                 val recordImage =
                     AnimatedImageVector.animatedVectorResource(R.drawable.anim_flip_camera)
-                val rotated = remember { mutableStateOf(false) }
-                var recordingLength = remember { mutableLongStateOf(0) }
+                var recordingLength by remember { mutableLongStateOf(0) }
 
-                LaunchedEffect(isRecording.value) {
-                    while (isRecording.value) {
-                        delay(1000L)
+                LaunchedEffect(isRecording) {
+                    while (isRecording) {
+                        delay(1000L) // TODO: constant for seconds?
 
-                        recordingLength.longValue += 1L
+                        recordingLength += 1L
                     }
                 }
 
                 // TODO: add constants for shadows throughout app
                 val cornerPadding = 12.dp
                 AnimatedVisibility(
-                    visible = isRecording.value,
+                    visible = isRecording,
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
@@ -267,7 +287,7 @@ fun GlimpseCamera(
                         tonalElevation = 5.dp
                     ) {
                         Text(
-                            text = recordingLength.longValue.formatTimeSeconds(appendZero = false),
+                            text = recordingLength.formatTimeSeconds(appendZero = false),
                             modifier = Modifier
                                 .padding(8.dp),
                             style = MaterialTheme.typography.bodyLarge,
@@ -285,8 +305,8 @@ fun GlimpseCamera(
                         onClick = {
                             flipCamera(
                                 lensFacing = lensFacing,
-                                rotated = rotated,
-                                cameraSelector = cameraSelector,
+                                setLensFacing = setLensFacing,
+                                setCameraSelector = { cameraSelector = it },
                                 recording = recording,
                                 context = context,
                                 lifecycleOwner = lifecycleOwner,
@@ -302,7 +322,10 @@ fun GlimpseCamera(
                         // TODO: add shadow to this and record button.
                         //  well, i actually don't know. maybe it is better without?
                         Image(
-                            painter = rememberAnimatedVectorPainter(recordImage, rotated.value),
+                            painter = rememberAnimatedVectorPainter(
+                                animatedImageVector = recordImage,
+                                atEnd = lensFacing == LENS_FACING_BACK
+                            ),
                             contentDescription = stringResource(R.string.flip_camera_content_description),
                             modifier = Modifier
                                 .fillMaxSize()
@@ -310,27 +333,35 @@ fun GlimpseCamera(
                     }
                 }
 
-                LaunchedEffect(isDelayBeforeShowingEditor.value) {
+                // TODO: consolidate launch effect. or organize them into code somewhere
+                LaunchedEffect(isDelayBeforeShowingEditor) {
                     delay(delayBeforeShowingEditor) // hardcoded for a second
-                    isDelayBeforeShowingEditor.value = false
+                    isDelayBeforeShowingEditor = false
                 }
 
                 val interactionSource = remember { MutableInteractionSource() }
-                val glimpseRecordDelay = integerResource(R.integer.glimpse_record_delay).toLong()
+                val taleRecordDelay = integerResource(R.integer.tale_record_delay).toLong()
 
+                // TODO: break this stuff up into separate composables
                 // TODO: show dynamic timeout in actual dialog
                 IconButton(
                     onClick = {
-                        if (!isRecording.value) {
-                            if (secondsUntilCanRecordAgain.value > 0) {
-                                openTimeoutDialog.value = true
+                        when (isRecording) {
+                            false -> if (recordingTimeout > 0) {
+                                isTimeoutDialogOpen = true
                             } else {
-                                openConfirmDialog.value = true
+                                isConfirmDialogOpen = true
                             }
-                        } else {
-                            stopRecording(isRecording, recording, atEnd)
-                            isDelayBeforeShowingEditor.value = true
-                            secondsUntilCanRecordAgain.value = glimpseRecordDelay
+
+                            true -> {
+                                stopRecording(
+                                    toggleRecording = toggleRecording,
+                                    recording = recording
+                                )
+
+                                isDelayBeforeShowingEditor = true
+                                setRecordingTimeout(taleRecordDelay)
+                            }
                         }
                     },
                     modifier = Modifier
@@ -345,8 +376,12 @@ fun GlimpseCamera(
                         R.drawable
                             .anim_camera_to_record
                     )
+                    // TODO: atEnd turn into camera orientation enum
                     Image(
-                        painter = rememberAnimatedVectorPainter(recordImage, atEnd.value),
+                        painter = rememberAnimatedVectorPainter(
+                            animatedImageVector = recordImage,
+                            atEnd = isRecording
+                        ),
                         contentDescription = stringResource(R.string.camera_button_content_description),
                         modifier = Modifier
                             .fillMaxSize()
@@ -387,7 +422,7 @@ fun GlimpseCamera(
 @Composable
 fun ConfirmDialog(
     onConfirm: () -> Unit,
-    openConfirmDialog: MutableState<Boolean>,
+    closeDialog: () -> Unit
 ) {
     AlertDialog(
         icon = {
@@ -409,7 +444,7 @@ fun ConfirmDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    openConfirmDialog.value = false
+                    closeDialog()
                     onConfirm()
                 }
             ) {
@@ -419,7 +454,7 @@ fun ConfirmDialog(
         dismissButton = {
             TextButton(
                 onClick = {
-                    openConfirmDialog.value = false
+                    closeDialog()
                 }
             ) {
                 Text("Dismiss")
@@ -432,14 +467,20 @@ fun ConfirmDialog(
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
-fun PreviewGlimpseCamera() {
-    GlimpseCamera(
-        canUseCamera = remember { mutableStateOf(true) },
-        canUseCameraAudio = remember { mutableStateOf(true) },
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
-        isRecording = remember { mutableStateOf(true) },
-        atEnd = remember { mutableStateOf(false) },
-        uri = remember { mutableStateOf(null) },
+fun PreviewTaleCamera() {
+    TaleCamera(
+        canUseCamera = true,
+        canUseCameraAudio = true,
+        setCanUseCamera = { },
+        setCanUseCameraAudio = { },
+        setRecordingTimeout = { },
+        recordingTimeout = 0L,
+        isRecording = false,
+        toggleRecording = { },
+        currentRecordedVideoUri = null,
+        setCurrentRecordedVideoUri = { },
+        lensFacing = LENS_FACING_FRONT,
+        setLensFacing = { },
         activity = null,
     )
 }
@@ -447,14 +488,20 @@ fun PreviewGlimpseCamera() {
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
-fun PreviewGlimpseCameraNoPermissions() {
-    GlimpseCamera(
-        canUseCamera = remember { mutableStateOf(false) },
-        canUseCameraAudio = remember { mutableStateOf(false) },
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(0) },
-        isRecording = remember { mutableStateOf(false) },
-        atEnd = remember { mutableStateOf(false) },
-        uri = remember { mutableStateOf(null) },
+fun PreviewTaleCameraNoPermissions() {
+    TaleCamera(
+        canUseCamera = false,
+        canUseCameraAudio = false,
+        setCanUseCamera = { },
+        setCanUseCameraAudio = { },
+        setRecordingTimeout = { },
+        recordingTimeout = 0L,
+        isRecording = false,
+        toggleRecording = { },
+        currentRecordedVideoUri = null,
+        setCurrentRecordedVideoUri = { },
+        lensFacing = LENS_FACING_FRONT,
+        setLensFacing = { },
         activity = null,
     )
 }
@@ -468,100 +515,104 @@ fun PreviewGlimpseCameraNoPermissions() {
 // TODO: don't use full class name
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
-fun PreviewGlimpseRecording() {
-    var context = LocalContext.current
-
-    GlimpseCamera(
-        canUseCamera = remember { mutableStateOf(true) },
-        canUseCameraAudio = remember { mutableStateOf(true) },
-        secondsUntilCanRecordAgain = remember { mutableLongStateOf(60 * 60 * 24) },
-        isRecording = remember { mutableStateOf(false) },
-        atEnd = remember { mutableStateOf(false) },
-        uri = remember { mutableStateOf(R.raw.preview_5.getUri(context)) },
-        activity = null
+fun PreviewTaleRecording() {
+    TaleCamera(
+        canUseCamera = true,
+        canUseCameraAudio = true,
+        setCanUseCamera = { },
+        setCanUseCameraAudio = { },
+        setRecordingTimeout = { },
+        recordingTimeout = 0L,
+        isRecording = false,
+        toggleRecording = { },
+        currentRecordedVideoUri = null,
+        setCurrentRecordedVideoUri = { },
+        lensFacing = LENS_FACING_FRONT,
+        setLensFacing = { },
+        activity = null,
     )
 }
 
+// TODO: remove all these nulls
 private fun startRecording(
-    isRecording: MutableState<Boolean>,
-    atEnd: MutableState<Boolean>,
-    videoCapture: MutableState<VideoCapture<Recorder>?>,
-    recording: MutableState<Recording?>,
-    uri: MutableState<Uri?>,
+    toggleRecording: () -> Unit,
+    videoCapture: VideoCapture<Recorder>?,
+    setRecording: (Recording?) -> Unit,
+    setCurrentRecordedVideoUri: (Uri?) -> Unit,
     context: Context
 ) {
-    toggleRecording(isRecording, atEnd)
+    toggleRecording()
 
-    videoCapture.value.let {
+    videoCapture.let {
+        // TODO: constant mediaDir in helper class maybe
+        // TODO: resource manager for mediaDir. maybe in a setting in app?
         val mediaDir = context.externalCacheDirs.firstOrNull()?.let {
             File(it, context.getString(R.string.app_name)).apply { mkdirs() }
         }
 
-        recording.value = startRecordingVideo(
-            context = context,
-            filenameFormat = "yyyy-MM-dd-HH-mm-ss-SSS",
-            videoCapture = videoCapture,
-            outputDirectory = if (mediaDir != null && mediaDir.exists()) mediaDir else context
-                .filesDir,
-            executor = context.mainExecutor,
-            audioEnabled = true,
-        ) { event ->
-            if (event is VideoRecordEvent.Finalize) {
-                uri.value = event.outputResults.outputUri
-            }
-        }
+        setRecording(
+            startRecordingVideo(
+                context = context,
+                // TODO: resource manager for filenameFormat
+                filenameFormat = "yyyy-MM-dd-HH-mm-ss-SSS",
+                videoCapture = videoCapture,
+                outputDirectory = if (mediaDir != null && mediaDir.exists()) mediaDir else context
+                    .filesDir,
+                executor = context.mainExecutor,
+                audioEnabled = true,
+            ) { event ->
+                if (event is VideoRecordEvent.Finalize) {
+                    setCurrentRecordedVideoUri(event.outputResults.outputUri)
+                }
+            })
     }
 }
 
 private fun stopRecording(
-    isRecording: MutableState<Boolean>,
-    recording: MutableState<Recording?>,
-    atEnd: MutableState<Boolean>,
+    toggleRecording: () -> Unit,
+    recording: Recording?,
 ) {
-    toggleRecording(isRecording, atEnd)
-    recording.value?.stop()
+    toggleRecording()
+    recording?.stop()
 }
 
-private fun toggleRecording(
-    recording: MutableState<Boolean>,
-    atEnd: MutableState<Boolean>
-) {
-    recording.value = !recording.value
-    atEnd.value = !atEnd.value
-}
-
+// TODO: no more nulls
 private fun flipCamera(
-    lensFacing: MutableIntState,
-    rotated: MutableState<Boolean>,
-    cameraSelector: MutableState<CameraSelector>,
-    recording: MutableState<Recording?>,
+    lensFacing: Int,
+    setLensFacing: (Int) -> Unit,
+    setCameraSelector: (CameraSelector) -> Unit,
+    recording: Recording?,
     context: Context,
     lifecycleOwner: LifecycleOwner,
-    videoCapture: MutableState<VideoCapture<Recorder>?>,
-    preview: MutableState<Preview?>,
-    cameraProvider: MutableState<ProcessCameraProvider?>
+    videoCapture: VideoCapture<Recorder>?,
+    preview: Preview?,
+    cameraProvider: ProcessCameraProvider?
 ) {
-    if (lensFacing.intValue == LENS_FACING_FRONT) {
-        lensFacing.intValue = LENS_FACING_BACK
-    } else {
-        lensFacing.intValue = LENS_FACING_FRONT
+    val tempLensFacing = when (lensFacing) {
+        LENS_FACING_FRONT -> LENS_FACING_BACK
+        LENS_FACING_BACK -> LENS_FACING_FRONT
+        else -> LENS_FACING_UNKNOWN
     }
-    rotated.value = !rotated.value
 
-    cameraSelector.value = CameraSelector.Builder()
-        .requireLensFacing(lensFacing.intValue)
+    val tempCameraSelector = CameraSelector.Builder()
+        .requireLensFacing(tempLensFacing)
         .build()
+
+    setLensFacing(tempLensFacing)
 
     recording.let {
         context.bindCamera(
-            lifecycleOwner, cameraSelector.value, preview, videoCapture.value,
+            lifecycleOwner, tempCameraSelector, preview, videoCapture,
             cameraProvider
         )
     }
+
+    setCameraSelector(tempCameraSelector)
 }
 
+// TODO: move into better file
 private fun checkPermission(
-    context: Context, state: MutableState<Boolean>,
+    context: Context, setState: (Boolean) -> Unit,
     activity:
     MainActivity,
     requestList: MutableList<String>, permission: String,
@@ -571,7 +622,7 @@ private fun checkPermission(
             permission
         ) == PackageManager.PERMISSION_GRANTED
     ) {
-        state.value = true
+        setState(true)
     } else {
         if (!ActivityCompat.shouldShowRequestPermissionRationale(
                 activity, permission
@@ -582,6 +633,8 @@ private fun checkPermission(
     }
 }
 
+// TODO: move into better file
+// TODO: finish up making callbacks for everything. no mutable states through parameters!
 suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspendCoroutine { continuation ->
     ProcessCameraProvider.getInstance(this).also { future ->
         future.addListener(
@@ -593,19 +646,23 @@ suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspendCoroutin
     }
 }
 
+// TODO: can we forget all the nulls
 suspend fun Context.createVideoCaptureUseCase(
     lifecycleOwner: LifecycleOwner,
     cameraSelector: CameraSelector,
     previewView: PreviewView,
-    preview: MutableState<Preview?>,
-    cameraProvider: MutableState<ProcessCameraProvider?>
+    preview: Preview?,
+    setPreview: (Preview) -> Unit,
+    cameraProvider: ProcessCameraProvider?,
+    setCameraProvider: (ProcessCameraProvider) -> Unit
 ): VideoCapture<Recorder> {
-    preview.value = Preview.Builder().build().apply {
+    val tempPreview = Preview.Builder().build().apply {
         surfaceProvider = previewView.surfaceProvider
     }
+    setPreview(tempPreview)
 
     val qualitySelector = QualitySelector.from(
-        Quality.FHD,
+        Quality.FHD, // TODO: hardcoded qualities? maybe make variable?
         FallbackStrategy.lowerQualityOrHigherThan(Quality.FHD)
     )
 
@@ -616,33 +673,37 @@ suspend fun Context.createVideoCaptureUseCase(
 
     val videoCapture = VideoCapture.withOutput(recorder)
 
-    cameraProvider.value = getCameraProvider()
-    bindCamera(lifecycleOwner, cameraSelector, preview, videoCapture, cameraProvider)
+    val tempCameraProvider = getCameraProvider()
+    setCameraProvider(tempCameraProvider)
+
+    bindCamera(lifecycleOwner, cameraSelector, tempPreview, videoCapture, tempCameraProvider)
 
     return videoCapture
 }
 
+// TODO: can we forget all the nulls
 fun Context.bindCamera(
     lifecycleOwner: LifecycleOwner,
     cameraSelector: CameraSelector,
-    preview: MutableState<Preview?>,
+    preview: Preview?,
     videoCapture: VideoCapture<Recorder>?,
-    cameraProvider: MutableState<ProcessCameraProvider?>
+    cameraProvider: ProcessCameraProvider?,
 ) {
-    cameraProvider.value?.unbindAll()
-    cameraProvider.value?.bindToLifecycle(
+    cameraProvider?.unbindAll()
+    cameraProvider?.bindToLifecycle(
         lifecycleOwner,
         cameraSelector,
-        preview.value,
+        preview,
         videoCapture
     )
 }
 
+// TODO: don't suppress this permission
 @SuppressLint("MissingPermission")
 fun startRecordingVideo(
     context: Context,
     filenameFormat: String,
-    videoCapture: MutableState<VideoCapture<Recorder>?>,
+    videoCapture: VideoCapture<Recorder>?,
     outputDirectory: File,
     executor: Executor,
     audioEnabled: Boolean,
@@ -655,7 +716,7 @@ fun startRecordingVideo(
 
     val outputOptions = FileOutputOptions.Builder(videoFile).build()
 
-    val output = videoCapture.value?.output
+    val output = videoCapture?.output
         ?.prepareRecording(context, outputOptions)
         ?.asPersistentRecording()
         ?.apply { if (audioEnabled) withAudioEnabled() }
