@@ -11,7 +11,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,7 +25,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -67,10 +68,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.alorma.compose.settings.ui.SettingsCheckbox
-import com.alorma.compose.settings.ui.SettingsGroup
-import com.alorma.compose.settings.ui.SettingsRadioButton
-import com.alorma.compose.settings.ui.SettingsSwitch
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import net.youdou.ui.screens.account.AccountSignInPage
@@ -78,19 +75,15 @@ import net.youdou.ui.screens.account.AccountSignUpPage
 import net.youdou.ui.screens.account.AccountStartPage
 import net.youdou.ui.screens.settings.YouDoUSettings
 import net.youdou.ui.screens.tale.Tale
-import net.youdou.ui.screens.tale.TaleCamera
+import net.youdou.ui.screens.tale.record.TaleCamera
 import net.youdou.ui.screens.tale.TaleGrid
 import net.youdou.ui.screens.tale.player.TalePlayer
 import net.youdou.ui.theme.YouDoUTheme
 import net.youdou.util.AppDestinations
+import net.youdou.util.formatTimeSecondsFull
 import net.youdou.util.getUri
 import net.youdou.util.gradient
 import net.youdou.util.previewTales
-import java.util.Locale
-import kotlin.time.Duration.Companion.seconds
-
-// TODO: can we do these serializables somewhere else.
-// TODO: research what a main class should look like
 
 @Serializable
 object MainApp
@@ -107,6 +100,7 @@ object AccountSignIn
 @Serializable
 object AccountSignUp
 
+// TODO: multi-window mode
 // TODO: go through all suppressions and clear unnecessary ones
 // TODO: find a way to test on other phones
 
@@ -221,8 +215,16 @@ class MainActivity : ComponentActivity() {
                             var isRecording by remember { mutableStateOf(false) }
                             var recordingTimeout by remember { mutableLongStateOf(0L) }
                             var currentRecordedVideoUri by remember { mutableStateOf<Uri?>(null) }
-                            var tales = remember { previewTales.toMutableList() } // TODO: change in full version
+                            var tales =
+                                remember { previewTales.toMutableList() } // TODO: change in full version
                             var lensFacing by remember { mutableIntStateOf(LENS_FACING_FRONT) }
+
+                            LaunchedEffect(recordingTimeout) {
+                                if (recordingTimeout > 0) {
+                                    delay(1000L)
+                                    recordingTimeout--
+                                }
+                            }
 
                             YouDoUScaffold(
                                 activity = activity,
@@ -246,7 +248,6 @@ class MainActivity : ComponentActivity() {
                                 isRecording = isRecording,
                                 toggleRecording = { isRecording = !isRecording },
                                 recordingTimeout = recordingTimeout,
-                                decrementRecordingTimeout = { recordingTimeout -= 1L },
                                 setRecordingTimeout = { recordingTimeout = it },
                                 canUseCamera = canUseCamera,
                                 canUseCameraAudio = canUseCameraAudio,
@@ -268,16 +269,14 @@ class MainActivity : ComponentActivity() {
                             }
 
                             val tale: Tale = backStackEntry.toRoute()
-
-                            // TODO: can we move this somewhere else
                             val exoPlayer = ExoPlayer.Builder(LocalContext.current)
                                 .setHandleAudioBecomingNoisy(true)
                                 .build()
 
                             TalePlayer(
                                 uri = tale.video.getUri(LocalContext.current),
-                                exoPlayer,
-                                R.layout.tale_watch_player_view,
+                                exoPlayer = exoPlayer,
+                                layout = R.layout.tale_watch_player_view,
                                 onVideoEndOrClose = {
                                     navController.navigate(route = MainApp)
                                 }
@@ -307,7 +306,6 @@ fun YouDoUScaffold(
     isRecording: Boolean,
     recordingTimeout: Long,
     setRecordingTimeout: (Long) -> Unit,
-    decrementRecordingTimeout: () -> Unit,
     activity: MainActivity?,
     canUseCamera: Boolean,
     canUseCameraAudio: Boolean,
@@ -322,22 +320,15 @@ fun YouDoUScaffold(
         AppDestinations.entries.size
     }
 
-    // TODO: put this in our state manager util class
-    LaunchedEffect(recordingTimeout) {
-        if (recordingTimeout > 0) {
-            delay(1000L)// TODO: constant for seconds
-            decrementRecordingTimeout()
-        }
-    }
-
     val topBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
         state = topBarState
     )
 
     var heightOffsetTarget by remember { mutableFloatStateOf(0f) }
-    val heightOffset by animateFloatAsState(
-        targetValue = heightOffsetTarget
+    val heightOffsetAnimated by animateFloatAsState(
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        targetValue = heightOffsetTarget,
     )
 
     Scaffold(
@@ -350,17 +341,15 @@ fun YouDoUScaffold(
             )
         }) { innerPadding ->
         HorizontalPager(
-            state = pagerState, modifier = Modifier.fillMaxSize(),
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
             userScrollEnabled = !isRecording
         ) { page ->
             when (page) {
-                // TODO: when can get rid of a lot of these arguments with callbacks
-                // TODO; for example: activity, uri, canUseCamera..., atEnd, isRecording, ...
-
                 AppDestinations.RECORD.pageNumber -> {
                     if (pagerState.targetPage == AppDestinations.RECORD.pageNumber) {
                         heightOffsetTarget = topBarState.heightOffsetLimit
-                        topBarState.heightOffset = heightOffset
+                        topBarState.heightOffset = heightOffsetAnimated
                     }
 
                     TaleCamera(
@@ -383,9 +372,19 @@ fun YouDoUScaffold(
 
                 // TODO: maybe have top-bar pull up to previous state when swiping left or right?
                 AppDestinations.VIEW.pageNumber -> {
-                    if (pagerState.targetPage == AppDestinations.VIEW.pageNumber) {
-                        heightOffsetTarget = topBarState.heightOffset
+                    val destination = AppDestinations.VIEW.pageNumber
+
+                    with (pagerState) {
+                        if (targetPage == destination) {
+                            if (settledPage != destination) {
+                                heightOffsetTarget = 0f
+                                topBarState.heightOffset = heightOffsetAnimated
+                            } else {
+                                heightOffsetTarget = topBarState.heightOffset
+                            }
+                        }
                     }
+
 
                     TaleGrid(
                         modifier = Modifier,
@@ -413,6 +412,7 @@ fun YouDoUTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val color = MaterialTheme.colorScheme.primaryContainer
+    val iconPadding = 10.dp
 
     Surface(
         shadowElevation = 3.dp
@@ -423,10 +423,9 @@ fun YouDoUTopBar(
             },
             scrollBehavior = scrollBehavior,
             actions = {
-                val iconPadding = 10.dp
 
                 Text(
-                    text = recordingTimeout.formatTimeSeconds(),
+                    text = recordingTimeout.formatTimeSecondsFull(),
                     modifier = Modifier
                         .padding(iconPadding)
                         .alpha(
@@ -443,8 +442,6 @@ fun YouDoUTopBar(
                         R.string.app_name
                     )
                 )
-
-                // TODO: multi-window mode
 
                 Icon(
                     Icons.Filled.Share,
@@ -488,7 +485,16 @@ fun YouDoUTopText(modifier: Modifier = Modifier) {
     )
 }
 
-// TODO: maybe delete me later?
+private fun share(text: String, context: Context) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        putExtra(Intent.EXTRA_TEXT, text)
+        type = "text/plan"
+    }
+    val shareIntent = Intent.createChooser(sendIntent, null)
+
+    context.startActivity(shareIntent)
+}
+
 @Suppress("VisualLintBounds")
 @Composable
 @Preview
@@ -503,7 +509,6 @@ fun PreviewScaffold() {
         isRecording = false,
         recordingTimeout = 0L,
         setRecordingTimeout = { },
-        decrementRecordingTimeout = { },
         activity = null,
         canUseCamera = true,
         canUseCameraAudio = true,
@@ -523,40 +528,4 @@ fun PreviewYouDoUTopBar() {
         recordingTimeout = 123L,
         scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     )
-}
-
-private fun Long.formatTimeSeconds(): String {
-    return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
-        StringBuilder().apply {
-            if (hours > 0) {
-                append(
-                    String.format(
-                        Locale.US, "%2d:", hours
-                    )
-                )
-            }
-
-            append(
-                String.format(
-                    Locale.US, "%02d:", minutes
-                )
-            )
-
-            append(
-                String.format(
-                    Locale.US, "%02d", seconds
-                )
-            )
-        }.toString()
-    }
-}
-
-private fun share(text: String, context: Context) {
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        putExtra(Intent.EXTRA_TEXT, text)
-        type = "text/plan"
-    }
-    val shareIntent = Intent.createChooser(sendIntent, null)
-
-    context.startActivity(shareIntent)
 }

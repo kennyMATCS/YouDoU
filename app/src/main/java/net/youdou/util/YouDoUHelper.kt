@@ -21,19 +21,39 @@ fun @receiver:RawRes Int.getUri(context: Context): Uri {
     }
 }
 
+fun Long.formatTimeSecondsFull(): String {
+    return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
+        StringBuilder().apply {
+            if (hours > 0) {
+                append(
+                    String.format(
+                        Locale.US, "%2d:", hours
+                    )
+                )
+            }
+
+            append(
+                String.format(
+                    Locale.US, "%02d:", minutes
+                )
+            )
+
+            append(
+                String.format(
+                    Locale.US, "%02d", seconds
+                )
+            )
+        }.toString()
+    }
+}
+
 fun Long.formatTimeSeconds(appendZero: Boolean = true): String {
     return seconds.toComponents { hours, minutes, seconds, nanoseconds ->
         StringBuilder().apply {
             when {
                 hours > 1L -> append(
                     String.format(
-                        Locale.US, "%d hours", hours
-                    )
-                )
-
-                hours == 1L -> append(
-                    String.format(
-                        Locale.US, "%d hour", hours
+                        Locale.US, "%d hours", hours + 1
                     )
                 )
 

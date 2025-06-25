@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -57,7 +58,10 @@ const val TITLE_SCALE = 1.5f
 // TODO: consolidate sign in pages and sign up pages
 // TODO: try on different display sizes, landscape and portrait. make sure insets are okay
 @Composable
-fun AccountStartPage(navigateSignIn: () -> Unit, navigateSignUp: () -> Unit) {
+fun AccountStartPage(
+    navigateSignIn: () -> Unit,
+    navigateSignUp: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -96,101 +100,156 @@ fun AccountStartPage(navigateSignIn: () -> Unit, navigateSignUp: () -> Unit) {
 // TODO: consolidate sign in pages and sign up pages
 @Composable
 fun AccountSignInPage(navigate: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center,
+    var usernameError by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf(false) }
+
+    val usernameErrorMessage = stringResource(R.string.username_invalid_message)
+    val passwordErrorMessage = stringResource(R.string.password_invalid_message)
+
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    val usernameMaxLength = integerResource(R.integer.username_max_length)
+    val passwordMaxLength = integerResource(R.integer.password_max_length)
+
+    val usernameMinLength = integerResource(R.integer.username_min_length)
+    val passwordMinLength = integerResource(R.integer.password_min_length)
+
+    AccountPageBase(
+        sectionTitle = stringResource(R.string.sign_in_text),
     ) {
-        Column(
+        AuthenticateSignInForm(
             modifier = Modifier
-                .width(IntrinsicSize.Min)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                YouDoUTopText(
-                    modifier = Modifier
-                        .padding(bottom = 10.dp, end = 10.dp)
-                )
+                .align(Alignment.CenterHorizontally),
+            usernameError = usernameError,
+            passwordError = passwordError,
+            username = username,
+            setUsername = { username = it },
+            password = password,
+            setPassword = { password = it },
+            usernameErrorMessage = usernameErrorMessage,
+            passwordErrorMessage = passwordErrorMessage
+        )
 
-                BigText(
-                    text = stringResource(R.string.sign_in_text),
-                    modifier = Modifier
-                        .padding(bottom = 10.dp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-
-            var usernameError by remember { mutableStateOf(false) }
-            var passwordError by remember { mutableStateOf(false) }
-
-            val usernameErrorMessage = stringResource(R.string.username_invalid_message)
-            val passwordErrorMessage = stringResource(R.string.password_invalid_message)
-
-            var username by remember { mutableStateOf("") }
-            var password by remember { mutableStateOf("") }
-
-            val usernameMaxLength = integerResource(R.integer.username_max_length)
-            val passwordMaxLength = integerResource(R.integer.password_max_length)
-
-            val usernameMinLength = integerResource(R.integer.username_min_length)
-            val passwordMinLength = integerResource(R.integer.password_min_length)
-
-            Surface(
-                shadowElevation = 3.dp,
-                tonalElevation = 3.dp,
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    AuthenticateSignInForm(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally),
-                        usernameError = usernameError,
-                        passwordError = passwordError,
-                        username = username,
-                        setUsername = { username = it },
-                        password = password,
-                        setPassword = { password = it },
-                        usernameErrorMessage = usernameErrorMessage,
-                        passwordErrorMessage = passwordErrorMessage
-                    )
-
-                    AuthenticateButton(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally),
-                        text = stringResource(R.string.sign_in_text),
-                        onClick = {
-                            usernameError = when (username.length) {
-                                in usernameMinLength..usernameMaxLength -> false
-                                else -> true
-                            }
-
-                            passwordError = when (password.length) {
-                                in passwordMinLength..passwordMaxLength -> false
-                                else -> true
-                            }
-
-                            if (!(usernameError || passwordError)) {
-                                navigate()
-                            }
-                        },
-                        color = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+        AuthenticateButton(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.sign_in_text),
+            onClick = {
+                usernameError = when (username.length) {
+                    in usernameMinLength..usernameMaxLength -> false
+                    else -> true
                 }
-            }
-        }
+
+                passwordError = when (password.length) {
+                    in passwordMinLength..passwordMaxLength -> false
+                    else -> true
+                }
+
+                if (!(usernameError || passwordError)) {
+                    navigate()
+                }
+            },
+            color = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
     }
 }
 
 @Composable
-fun AccountSignUpPage(navigate: () -> Unit) {
+fun AccountSignUpPage(
+    navigate: () -> Unit,
+) {
+    val usernameMaxLength = integerResource(R.integer.username_max_length)
+    val passwordMaxLength = integerResource(R.integer.password_max_length)
+    val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
+
+    val usernameMinLength = integerResource(R.integer.username_min_length)
+    val passwordMinLength = integerResource(R.integer.password_min_length)
+    val phoneNumberMinLength = integerResource(R.integer.phone_min_length)
+
+    var usernameError by remember { mutableStateOf(false) }
+    var phoneNumberError by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf(false) }
+    var confirmPasswordError by remember { mutableStateOf(false) }
+
+    val usernameErrorMessage = stringResource(R.string.username_invalid_message)
+    val phoneNumberErrorMessage = stringResource(R.string.phone_number_invalid_message)
+    val passwordErrorMessage = stringResource(R.string.password_invalid_message)
+    val confirmPasswordErrorMessage = stringResource(
+        R.string
+            .confirm_password_invalid_message
+    )
+
+    var username by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    AccountPageBase(
+        sectionTitle = stringResource(R.string.sign_up_text)
+    ) {
+        AuthenticateSignUpForm(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
+            usernameError = usernameError,
+            phoneNumberError = phoneNumberError,
+            passwordError = passwordError,
+            confirmPasswordError = confirmPasswordError,
+            username = username,
+            setUsername = { username = it },
+            phoneNumber = phoneNumber,
+            setPhoneNumber = { phoneNumber = it },
+            password = password,
+            setPassword = { password = it },
+            confirmPassword = confirmPassword,
+            setConfirmPassword = { confirmPassword = it },
+            usernameErrorMessage = usernameErrorMessage,
+            passwordErrorMessage = passwordErrorMessage,
+            phoneNumberErrorMessage = phoneNumberErrorMessage,
+            confirmPasswordErrorMessage = confirmPasswordErrorMessage
+        )
+
+        AuthenticateButton(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.sign_up_text),
+            onClick = {
+                usernameError = when (username.length) {
+                    in usernameMinLength..usernameMaxLength -> false
+                    else -> true
+                }
+
+                passwordError = when (password.length) {
+                    in passwordMinLength..passwordMaxLength -> false
+                    else -> true
+                }
+
+                confirmPasswordError = (confirmPassword != password
+                        || confirmPassword.isEmpty())
+
+                phoneNumberError = when (phoneNumber.length) {
+                    in phoneNumberMinLength..phoneNumberMaxLength -> false
+                    else -> true
+                }
+
+                if (!(usernameError || passwordError ||
+                            confirmPasswordError || phoneNumberError)
+                ) {
+                    navigate()
+                }
+            },
+            color = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    }
+}
+
+@Composable
+fun AccountPageBase(
+    sectionTitle: String,
+    content: @Composable (ColumnScope.() -> Unit),
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -208,42 +267,19 @@ fun AccountSignUpPage(navigate: () -> Unit) {
             ) {
                 YouDoUTopText(
                     modifier = Modifier
-                        .padding(bottom = 10.dp, end = 10.dp)
+                        .padding(
+                            bottom = 10.dp,
+                            end = 10.dp
+                        )
                 )
 
                 BigText(
-                    text = stringResource(R.string.sign_up_text),
+                    text = sectionTitle,
                     modifier = Modifier
                         .padding(bottom = 10.dp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-
-            val usernameMaxLength = integerResource(R.integer.username_max_length)
-            val passwordMaxLength = integerResource(R.integer.password_max_length)
-            val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
-
-            val usernameMinLength = integerResource(R.integer.username_min_length)
-            val passwordMinLength = integerResource(R.integer.password_min_length)
-            val phoneNumberMinLength = integerResource(R.integer.phone_min_length)
-
-            var usernameError by remember { mutableStateOf(false) }
-            var phoneNumberError by remember { mutableStateOf(false) }
-            var passwordError by remember { mutableStateOf(false) }
-            var confirmPasswordError by remember { mutableStateOf(false) }
-
-            val usernameErrorMessage = stringResource(R.string.username_invalid_message)
-            val phoneNumberErrorMessage = stringResource(R.string.phone_number_invalid_message)
-            val passwordErrorMessage = stringResource(R.string.password_invalid_message)
-            val confirmPasswordErrorMessage = stringResource(
-                R.string
-                    .confirm_password_invalid_message
-            )
-
-            var username by remember { mutableStateOf("") }
-            var phoneNumber by remember { mutableStateOf("") }
-            var password by remember { mutableStateOf("") }
-            var confirmPassword by remember { mutableStateOf("") }
 
             Surface(
                 shadowElevation = 3.dp,
@@ -254,59 +290,7 @@ fun AccountSignUpPage(navigate: () -> Unit) {
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    AuthenticateSignUpForm(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally),
-                        usernameError = usernameError,
-                        phoneNumberError = phoneNumberError,
-                        passwordError = passwordError,
-                        confirmPasswordError = confirmPasswordError,
-                        username = username,
-                        setUsername = { username = it },
-                        phoneNumber = phoneNumber,
-                        setPhoneNumber = { phoneNumber = it },
-                        password = password,
-                        setPassword = { password = it },
-                        confirmPassword = confirmPassword,
-                        setConfirmPassword = { confirmPassword = it },
-                        usernameErrorMessage = usernameErrorMessage,
-                        passwordErrorMessage = passwordErrorMessage,
-                        phoneNumberErrorMessage = phoneNumberErrorMessage,
-                        confirmPasswordErrorMessage = confirmPasswordErrorMessage
-                    )
-
-                    AuthenticateButton(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally),
-                        text = stringResource(R.string.sign_up_text),
-                        onClick = {
-                            usernameError = when (username.length) {
-                                in usernameMinLength..usernameMaxLength -> false
-                                else -> true
-                            }
-
-                            passwordError = when (password.length) {
-                                in passwordMinLength..passwordMaxLength -> false
-                                else -> true
-                            }
-
-                            confirmPasswordError = (confirmPassword != password
-                                    || confirmPassword.isEmpty())
-
-                            phoneNumberError = when (phoneNumber.length) {
-                                in phoneNumberMinLength..phoneNumberMaxLength -> false
-                                else -> true
-                            }
-
-                            if (!(usernameError || passwordError ||
-                                        confirmPasswordError || phoneNumberError)
-                            ) {
-                                navigate()
-                            }
-                        },
-                        color = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    content()
                 }
             }
         }
@@ -319,7 +303,7 @@ fun AuthenticateButton(
     onClick: () -> Unit,
     color: Color,
     containerColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Button(
         content = {
@@ -343,6 +327,26 @@ fun AuthenticateButton(
 }
 
 @Composable
+fun AuthenticateFormBase(
+    modifier: Modifier,
+    content: (@Composable () -> Unit),
+) {
+    Surface(
+        modifier = modifier
+            .padding(6.dp),
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
 fun AuthenticateSignInForm(
     modifier: Modifier = Modifier,
     usernameError: Boolean,
@@ -354,46 +358,38 @@ fun AuthenticateSignInForm(
     password: String,
     setPassword: (String) -> Unit,
 ) {
-    Surface(
+    val usernameLabel = stringResource(R.string.place_holder_username_sign_in_field)
+    val passwordLabel = stringResource(R.string.place_holder_password_field)
+
+    val usernameMaxLength = integerResource(R.integer.username_max_length)
+    val passwordMaxLength = integerResource(R.integer.password_max_length)
+
+    AuthenticateFormBase(
         modifier = modifier
-            .padding(6.dp),
-        color = Color.Transparent,
     ) {
-        val usernameLabel = stringResource(R.string.place_holder_username_sign_in_field)
-        val passwordLabel = stringResource(R.string.place_holder_password_field)
-
-        val usernameMaxLength = integerResource(R.integer.username_max_length)
-        val passwordMaxLength = integerResource(R.integer.password_max_length)
-
-        Column(
-            modifier = Modifier
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-            content = {
-                AuthenticateTextField(
-                    content = username,
-                    setContent = { setUsername(it) },
-                    contentType = ContentType.Username,
-                    label = usernameLabel, visualTransformation = VisualTransformation.None,
-                    keyboardOptions = KeyboardOptions.Default,
-                    maxLength = usernameMaxLength,
-                    isPassword = false,
-                    error = usernameError,
-                    errorMessage = usernameErrorMessage
-                )
-                AuthenticateTextField(
-                    content = password,
-                    setContent = { setPassword(it) },
-                    contentType = ContentType.Password,
-                    label = passwordLabel,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    maxLength = passwordMaxLength,
-                    isPassword = true,
-                    error = passwordError,
-                    errorMessage = passwordErrorMessage
-                )
-            },
+        AuthenticateTextField(
+            content = username,
+            setContent = { setUsername(it) },
+            contentType = ContentType.Username,
+            label = usernameLabel,
+            visualTransformation = VisualTransformation.None,
+            keyboardOptions = KeyboardOptions.Default,
+            maxLength = usernameMaxLength,
+            isPassword = false,
+            error = usernameError,
+            errorMessage = usernameErrorMessage
+        )
+        AuthenticateTextField(
+            content = password,
+            setContent = { setPassword(it) },
+            contentType = ContentType.Password,
+            label = passwordLabel,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            maxLength = passwordMaxLength,
+            isPassword = true,
+            error = passwordError,
+            errorMessage = passwordErrorMessage
         )
     }
 }
@@ -418,76 +414,68 @@ fun AuthenticateSignUpForm(
     confirmPassword: String,
     setConfirmPassword: (String) -> Unit,
 ) {
-    Surface(
+    val usernameLabel = stringResource(R.string.place_holder_username_sign_up_field)
+    val phoneNumberLabel = stringResource(R.string.place_holder_phone_number_field)
+    val passwordLabel = stringResource(R.string.place_holder_password_field)
+    val confirmPasswordLabel = stringResource(R.string.place_holder_password_confirm_field)
+
+    val usernameMaxLength = integerResource(R.integer.username_max_length)
+    val passwordMaxLength = integerResource(R.integer.password_max_length)
+    val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
+
+    AuthenticateFormBase(
         modifier = modifier
-            .padding(6.dp),
-        color = Color.Transparent
     ) {
-        val usernameLabel = stringResource(R.string.place_holder_username_sign_up_field)
-        val phoneNumberLabel = stringResource(R.string.place_holder_phone_number_field)
-        val passwordLabel = stringResource(R.string.place_holder_password_field)
-        val confirmPasswordLabel = stringResource(R.string.place_holder_password_confirm_field)
-
-        val usernameMaxLength = integerResource(R.integer.username_max_length)
-        val passwordMaxLength = integerResource(R.integer.password_max_length)
-        val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
-
-        Column(
-            modifier = Modifier
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-            content = {
-                AuthenticateTextField(
-                    content = username,
-                    setContent = { setUsername(it) },
-                    contentType = ContentType.NewUsername,
-                    label = usernameLabel, visualTransformation = VisualTransformation.None,
-                    keyboardOptions = KeyboardOptions.Default,
-                    maxLength = usernameMaxLength,
-                    isPassword = false,
-                    error = usernameError,
-                    errorMessage = usernameErrorMessage
-                )
-                AuthenticateTextField(
-                    content = phoneNumber,
-                    setContent = { setPhoneNumber(it) },
-                    contentType = ContentType.PhoneNumber,
-                    label = phoneNumberLabel,
-                    visualTransformation = NanpVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType =
-                            KeyboardType.Number
-                    ),
-                    maxLength = phoneNumberMaxLength,
-                    isPassword = false,
-                    error = phoneNumberError,
-                    errorMessage = phoneNumberErrorMessage
-                )
-                AuthenticateTextField(
-                    content = password,
-                    setContent = { setPassword(it) },
-                    contentType = ContentType.NewPassword,
-                    label = passwordLabel,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    maxLength = passwordMaxLength,
-                    isPassword = true,
-                    error = passwordError,
-                    errorMessage = passwordErrorMessage
-                )
-                AuthenticateTextField(
-                    content = confirmPassword,
-                    setContent = { setConfirmPassword(it) },
-                    contentType = ContentType.NewPassword,
-                    label = confirmPasswordLabel,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    maxLength = passwordMaxLength,
-                    isPassword = true,
-                    error = confirmPasswordError,
-                    errorMessage = confirmPasswordErrorMessage
-                )
-            },
+        AuthenticateTextField(
+            content = username,
+            setContent = { setUsername(it) },
+            contentType = ContentType.NewUsername,
+            label = usernameLabel,
+            visualTransformation = VisualTransformation.None,
+            keyboardOptions = KeyboardOptions.Default,
+            maxLength = usernameMaxLength,
+            isPassword = false,
+            error = usernameError,
+            errorMessage = usernameErrorMessage
+        )
+        AuthenticateTextField(
+            content = phoneNumber,
+            setContent = { setPhoneNumber(it) },
+            contentType = ContentType.PhoneNumber,
+            label = phoneNumberLabel,
+            visualTransformation = NanpVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType =
+                    KeyboardType.Number
+            ),
+            maxLength = phoneNumberMaxLength,
+            isPassword = false,
+            error = phoneNumberError,
+            errorMessage = phoneNumberErrorMessage
+        )
+        AuthenticateTextField(
+            content = password,
+            setContent = { setPassword(it) },
+            contentType = ContentType.NewPassword,
+            label = passwordLabel,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            maxLength = passwordMaxLength,
+            isPassword = true,
+            error = passwordError,
+            errorMessage = passwordErrorMessage
+        )
+        AuthenticateTextField(
+            content = confirmPassword,
+            setContent = { setConfirmPassword(it) },
+            contentType = ContentType.NewPassword,
+            label = confirmPasswordLabel,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            maxLength = passwordMaxLength,
+            isPassword = true,
+            error = confirmPasswordError,
+            errorMessage = confirmPasswordErrorMessage
         )
     }
 }
@@ -501,7 +489,8 @@ private fun AuthenticateTextField(
     label: String,
     visualTransformation: VisualTransformation,
     keyboardOptions: KeyboardOptions,
-    maxLength: Int = -1, isPassword: Boolean,
+    maxLength: Int = -1,
+    isPassword: Boolean,
     error: Boolean,
     errorMessage: String,
 ) {
@@ -545,23 +534,30 @@ private fun AuthenticateTextField(
                 val image =
                     if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
 
-                val description = if (passwordVisible) "Hide password" else "Show password" // TODO: content description in resource manager
+                val description =
+                    if (passwordVisible) "Hide password" else "Show password" // TODO: content description in resource manager
 
                 // TODO: hold down as opposed to toggle
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, description)
+                    Icon(
+                        imageVector = image,
+                        description
+                    )
                 }
             }
         } else {
             null
         },
-        // TODO: DO NOT PASS DOWN MUTABLE STATE!
         isError = error
     )
 }
 
 @Composable
-fun BigText(modifier: Modifier = Modifier, text: String, color: Color) {
+fun BigText(
+    modifier: Modifier = Modifier,
+    text: String,
+    color: Color,
+) {
     Text(
         text = text,
         color = color,
@@ -581,7 +577,10 @@ private class NanpVisualTransformation : VisualTransformation {
             if (i == 6) out += "-"
             out += trimmed[i]
         }
-        return TransformedText(AnnotatedString(out), phoneNumberOffsetTranslator)
+        return TransformedText(
+            AnnotatedString(out),
+            phoneNumberOffsetTranslator
+        )
     }
 
     private val phoneNumberOffsetTranslator = object : OffsetMapping {
@@ -612,7 +611,10 @@ private class NanpVisualTransformation : VisualTransformation {
 @Preview
 @Composable
 fun PreviewAccountStartPage() {
-    AccountStartPage({ }, { })
+    AccountStartPage(
+        { },
+        { }
+    )
 }
 
 @Preview

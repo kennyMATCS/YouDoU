@@ -711,8 +711,6 @@ fun TaleImage(
 ) {
     val heightFactor: Float = (expirationSeconds / (60f * 60f))
 
-    // TODO: split into it's own composable
-    // gray expiration bar and thumbnail
     Image(
         painter = painterResource(tale.thumbnail),
         contentDescription = stringResource(tale.contentDescription),
@@ -787,6 +785,7 @@ fun TaleHeartCount(
     startBubbling: () -> Unit,
 ) {
     val heartsVal = integerResource(tale.hearts)
+    // TODO: rememberSaveable
     var hearts by remember { mutableIntStateOf(heartsVal) }
 
     val context = LocalContext.current
@@ -804,7 +803,6 @@ fun TaleHeartCount(
             .clip(behindShape)
             .clickable {
                 if (!explodeTransition.isRunning) {
-                    // TODO: mutable state callable maybe?
                     hearts++
 
                     startBubbling()
