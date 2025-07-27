@@ -75,9 +75,9 @@ import net.youdou.ui.screens.account.AccountSignUpPage
 import net.youdou.ui.screens.account.AccountStartPage
 import net.youdou.ui.screens.settings.YouDoUSettings
 import net.youdou.ui.screens.tale.Tale
-import net.youdou.ui.screens.tale.record.TaleCamera
 import net.youdou.ui.screens.tale.TaleGrid
 import net.youdou.ui.screens.tale.player.TalePlayer
+import net.youdou.ui.screens.tale.record.TaleCamera
 import net.youdou.ui.theme.YouDoUTheme
 import net.youdou.util.AppDestinations
 import net.youdou.util.formatTimeSecondsFull
@@ -155,7 +155,10 @@ class MainActivity : ComponentActivity() {
                             slideInVertically(initialOffsetY = { -40 }) + expandVertically(
                                 expandFrom = Alignment.CenterVertically
                             ) + scaleIn(
-                                transformOrigin = TransformOrigin(0.5f, 0f)
+                                transformOrigin = TransformOrigin(
+                                    0.5f,
+                                    0f
+                                )
                             ) + fadeIn(initialAlpha = 0.3f)
                         },
 
@@ -163,14 +166,20 @@ class MainActivity : ComponentActivity() {
                             slideOutVertically(targetOffsetY = { -40 }) + shrinkVertically(
                                 shrinkTowards = Alignment.CenterVertically
                             ) + scaleOut(
-                                transformOrigin = TransformOrigin(0.5f, 0f)
+                                transformOrigin = TransformOrigin(
+                                    0.5f,
+                                    0f
+                                )
                             ) + fadeOut(targetAlpha = 0.3f)
                         },
 
                         ) {
 
                         var windowInsetsController =
-                            WindowCompat.getInsetsController(window, window.decorView)
+                            WindowCompat.getInsetsController(
+                                window,
+                                window.decorView
+                            )
 
                         composable<AccountStartPage> {
                             AccountStartPage(
@@ -225,7 +234,6 @@ class MainActivity : ComponentActivity() {
                                     recordingTimeout--
                                 }
                             }
-
                             YouDoUScaffold(
                                 activity = activity,
                                 tales = tales.toList(),
@@ -320,6 +328,8 @@ fun YouDoUScaffold(
         AppDestinations.entries.size
     }
 
+    // TODO: pinned top-bar setting
+    // TODO: auto top-bar pull down setting
     val topBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
         state = topBarState
@@ -333,7 +343,6 @@ fun YouDoUScaffold(
 
     Scaffold(
         topBar = {
-            // TODO: secondsUntilRecordAgain should be callback
             YouDoUTopBar(
                 onClickSettings = onClickSettings,
                 recordingTimeout = recordingTimeout,
@@ -370,11 +379,10 @@ fun YouDoUScaffold(
                     )
                 }
 
-                // TODO: maybe have top-bar pull up to previous state when swiping left or right?
                 AppDestinations.VIEW.pageNumber -> {
                     val destination = AppDestinations.VIEW.pageNumber
 
-                    with (pagerState) {
+                    with(pagerState) {
                         if (targetPage == destination) {
                             if (settledPage != destination) {
                                 heightOffsetTarget = 0f
@@ -438,7 +446,8 @@ fun YouDoUTopBar(
                 // TODO: add link to app in final version
                 val context = LocalContext.current
                 val text = stringResource(R.string.share_message).replace(
-                    "%app_name%", stringResource(
+                    "%app_name%",
+                    stringResource(
                         R.string.app_name
                     )
                 )
@@ -451,7 +460,8 @@ fun YouDoUTopBar(
                         .padding(horizontal = iconPadding)
                         .clickable {
                             share(
-                                text = text, context = context
+                                text = text,
+                                context = context
                             )
                         })
 
@@ -485,12 +495,21 @@ fun YouDoUTopText(modifier: Modifier = Modifier) {
     )
 }
 
-private fun share(text: String, context: Context) {
+private fun share(
+    text: String,
+    context: Context,
+) {
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        putExtra(Intent.EXTRA_TEXT, text)
+        putExtra(
+            Intent.EXTRA_TEXT,
+            text
+        )
         type = "text/plan"
     }
-    val shareIntent = Intent.createChooser(sendIntent, null)
+    val shareIntent = Intent.createChooser(
+        sendIntent,
+        null
+    )
 
     context.startActivity(shareIntent)
 }

@@ -87,7 +87,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import net.youdou.R
@@ -97,8 +96,6 @@ import net.youdou.util.compareTo
 import net.youdou.util.formatTimeSeconds
 import net.youdou.util.previewTales
 import net.youdou.util.vibrate
-import kotlin.math.abs
-import kotlin.math.max
 import kotlin.random.Random
 
 @Serializable
@@ -109,17 +106,25 @@ data class Tale(
     val time: Int,
     val video: Int,
     val secondsUntilExpiration: Int,
-    val hearts: Int
+    val hearts: Int,
 )
 
 data class DropDownItem(
-    val text: String, val isError: Boolean, val onItemClick: () -> Unit
+    val text: String,
+    val isError: Boolean,
+    val onItemClick: () -> Unit,
 )
 
 // TODO: add this to resource manager?
 val DROP_DOWN_ITEMS = listOf(
-    DropDownItem("Report", isError = true, onItemClick = { }),
-    DropDownItem("Length: $TALE_DURATION_SPECIFIER", isError = false, onItemClick = { }),
+    DropDownItem(
+        "Report",
+        isError = true,
+        onItemClick = { }),
+    DropDownItem(
+        "Length: $TALE_DURATION_SPECIFIER",
+        isError = false,
+        onItemClick = { }),
 )
 
 const val TALE_DURATION_SPECIFIER = "%tale_duration"
@@ -128,59 +133,33 @@ enum class DetailPaneBreakpoint {
     COMPACT, MEDIUM, EXPANDED
 }
 
-// TODO: live heart updates!!! this should have an animation too, keeps us all connected
-// TODO: the heart count could update in sync with the shake so we aren't spamming updates on screen
-// TODO: we could also just not shake unless the user is doing it themselves
-// TODO: we could only show hearts once the tale reaches certain milestones: 1, 5, 10, 20, 40,
-//  100, 200, 300, 400, 500, etc.
+// use inspect tool. fix all the things.
+// linter, error-checking
 
-// TODO: like animation
 // TODO: like pop-up with heart count
-
-// TODO: report feature done. nsfw scanning done
-
-// TODO: have a way to see how many times you hearted a tale. should you be able to heart more
-//  than
-//  once? i think so
-
-// TODO: more organized previews
-
-// TODO: torrent like video sharing so i don't have to buy a server
-// TODO: is this allowed in every country?
-// TODO: maybe i can use a library for it
-// TODO: i could do it in python
-
-// TODO: animation when you get a new heart at the start of the day
 
 // TODO: test record and watch player to see if they r working after consolidated classes
 
-// TODO: have a way for users to see how many times people liked and viewed their tale. this
-//  is VERY IMPORTANT
+// TODO: why is the app pink on anna's phone - ASK ANNA
+
+// TODO: think about blind-deaf people. how do we accommodate for them. also, visit
+//  gallaudet to learn about accessibility - ASK ANNA
 
 // TODO: prevent recorded video from stretching once opening to edit
 
-// TODO: keep app data saved when tabbing out. rememberSaveable
-
 // TODO: label all animations
 
+// TODO: keep app data saved when tabbing out. rememberSaveable
 // TODO: rememberSaveable to preserve state between screen rotations
 //  https://developer.android.com/develop/ui/compose/state#restore-ui-state
 
 // TODO: disable spaces in copy and paste with text field for login
 // TODO: maintain video location after exiting tale
-// TODO: don't reset app when orientation changed
 // TODO: remove tale after watched
 
 // TODO: Skipped 31 frames!  The application may be doing too much work on its main thread.
 
 // TODO: make sure status bar does not show when exiting tale
-
-// TODO: In Jetpack Compose, you should never pass a MutableState<T> as parameter to other
-//  Composables, as this violates the unidirectional data flow pattern.
-// TODO: what is unidirectional data flow pattern?
-// TODO: "Utility" class to mange all the callbacks. That way, we don't need to pass as many
-//  arguments down to child composables
-// TODO: is there a way to stop using mutablestate.value so much? ANSWERED
 
 // TODO: fix lag in with heart animation
 
@@ -188,12 +167,14 @@ enum class DetailPaneBreakpoint {
 
 // TODO: title for Tales above tale grid
 
-// TODO: class rename, they don't feel right. They are too spigot-esque. Composables are not like
-//  spigot
-
-// TODO: watermark for videos made. probably can be done through bunny
-
 // TODO: good comments for everything
+
+// TODO: have a way for users to see how many times people liked and viewed their tale. this
+//  is VERY IMPORTANT
+
+// TODO: more needs to be done with tale uploading. users need to have a better idea of that the
+//  process looks like. e.g., what is the lifecycle of the tale they upload? what will happen to
+//  it? who will see it?
 
 // TODO: pay attention to heart spam. if that animation triggers a lot it might be annoying
 
@@ -248,14 +229,22 @@ enum class DetailPaneBreakpoint {
 
 // TODO: landscape mode remove overlapping camera ON tale view AND player view
 
+// TODO: ensure top-bar insets work for all phones
+
+// TODO: NEW BOTTOM NAV-BAR
+
 // TODO: logo
+// TODO: different logo types for different situations. full logo, icon only, etc.
 // TODO; playful, animated, baldi's basics vibe
+
+// TODO: gradient throughout whole app - ASK ANNA
 
 // TODO: ask nico about beta testing.
 // TODO: button to reset app state for beta testers, e.g. reset recording timer or default tales
 
-// TODO: subreddit
-// TODO: idea of app is to encourage conversation
+// TODO: test app on FOLD devices
+// TODO: make sure you haven't just been using the display manager. we need to see how the app
+//  feels to use.
 
 // TODO: improve record tale UI
 // TODO: redo button shadows and length
@@ -264,11 +253,7 @@ enum class DetailPaneBreakpoint {
 
 // TODO: find a way to reduce minsdk. all people should be able to use the app :)
 
-// TODO: more powerful api server for constant requests. specifically, sending heart count update
-//  and video removed updates
-
-// TODO: shake animation for ui. login and heart updates
-// https://www.sinasamaki.com/shake-animations-compose/
+// TODO: shake animation for login
 
 // TODO: test out all new callables
 
@@ -279,8 +264,6 @@ enum class DetailPaneBreakpoint {
 // TODO: force ui check before pushing code
 // TODO: fix dark mode in ui check. also look through dark mode needs to be better
 // TODO: better landscape mode OR force portrait on phone
-// TODO: create settings
-// TODO: adjust in-out animation. learn how to use animation manager
 // TODO: fix ui check FOR EVERYTHING
 // TODO: unit testing -- espresso
 
@@ -297,7 +280,7 @@ enum class DetailPaneBreakpoint {
 // TODO: visit weatherspoon
 // TODO: improve dropdown popup
 
-// TODO: dark mode in settings
+// TODO: dark mode in settings. why?
 
 // TODO: maintain states for everything
 // TODO: how do we ensure local states are synced with API and people don't cheat the system
@@ -373,7 +356,10 @@ fun TaleGrid(
 }
 
 @Composable
-private fun TaleCardBase(modifier: Modifier, content: @Composable (() -> Unit)) {
+private fun TaleCardBase(
+    modifier: Modifier,
+    content: @Composable (() -> Unit),
+) {
     Surface(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
@@ -396,12 +382,9 @@ fun TaleCard(
     var isContextMenuVisible by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
 
-    // TODO: better var names
     var cardWidth by remember { mutableIntStateOf(1) }
     var cardHeight by remember { mutableIntStateOf(1) }
 
-    // TODO: better variable names
-    // TODO: mutable state callables
     var explodingHeartsStartOffset by remember { mutableStateOf(Offset.Zero) }
     var isBubbling by remember { mutableStateOf(false) }
     var isExploding by remember { mutableStateOf(false) }
@@ -413,7 +396,7 @@ fun TaleCard(
 
     var shakingLeft = true
     val shake = 1.5f
-    
+
     val explodeTransition = updateTransition(isExploding)
     val cardShake by shakeTransition.animateOffset(
         transitionSpec = {
@@ -422,25 +405,33 @@ fun TaleCard(
                 animation = tween(durationMillis = 20),
                 repeatMode = RepeatMode.Reverse
             )
-        }
-    ) { state ->
+        }) { state ->
         when (state) {
             true -> {
                 shakingLeft = !shakingLeft
-                if (shakingLeft) Offset(-shake, -shake) else Offset(shake, shake)
+                if (shakingLeft) Offset(
+                    -shake,
+                    -shake
+                ) else Offset(
+                    shake,
+                    shake
+                )
             }
 
-            false -> Offset(0f, 0f)
+            false -> Offset(
+                0f,
+                0f
+            )
         }
     }
 
+    // TODO: improve exploding hearts
     TaleCardBase(
         modifier = modifier
-            .onGloballyPositioned {
-                cardWidth = max(abs(it.size.width), 1)
-                cardHeight = max(abs(it.size.height), 1)
-            }
-            .offset(x = cardShake.x.dp, y = cardShake.y.dp)
+            .offset(
+                x = cardShake.x.dp,
+                y = cardShake.y.dp
+            )
     ) {
         Box {
             YouDoUDropDown(
@@ -467,8 +458,7 @@ fun TaleCard(
                 val secs = integerResource(tale.secondsUntilExpiration).toLong()
                 var expirationSeconds by remember { mutableLongStateOf(secs.toLong()) }
                 val expirationSecondsWarningThreshold = integerResource(
-                    R.integer
-                        .expiration_seconds_warning_threshold
+                    R.integer.expiration_seconds_warning_threshold
                 )
 
                 // TODO: change when expiration data isn't hardcoded. api connection
@@ -479,21 +469,30 @@ fun TaleCard(
                     }
 
                     onRemoveTale(tale)
-                    cancel()
                 }
 
                 TaleImage(
+                    modifier = Modifier
+                        .onGloballyPositioned {
+                            cardWidth = it.size.width
+                            cardHeight = it.size.height
+
+                            // TODO: center exploding hearts
+                            explodingHeartsStartOffset = Offset(
+                                cardWidth / 2f,
+                                cardHeight / 2f
+                            )
+                        },
                     tale = tale,
                     expirationSeconds = expirationSeconds,
                     expirationSecondsWarningThreshold = expirationSecondsWarningThreshold,
                     onClickTale = onClickTale,
                     makeContextMenuVisible = { isContextMenuVisible = true },
                     setContextMenuOffset = { contextMenuOffset = it },
-                ) 
+                )
 
                 TaleTime(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart),
+                    modifier = Modifier.align(Alignment.BottomStart),
                     behindShape = behindShape,
                     behindColor = behindColor,
                     behindPadding = behindPadding,
@@ -504,8 +503,7 @@ fun TaleCard(
                 )
 
                 TaleHeartCount(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd),
+                    modifier = Modifier.align(Alignment.BottomEnd),
                     tale = tale,
                     behindShape = behindShape,
                     behindColor = behindColor,
@@ -514,18 +512,6 @@ fun TaleCard(
                     textStyle = textStyle,
                     explodeTransition = explodeTransition,
                     startBubbling = { isBubbling = true }
-                )
-
-                ExplodingHearts(
-                    explodingHeartsStartOffset = explodingHeartsStartOffset,
-                    isBubbling = isBubbling,
-                    isExploding = isExploding,
-                    stopBubbling = { isBubbling = false },
-                    startExploding = { isExploding = true },
-                    stopExploding = { isExploding = false },
-                    cardWidth,
-                    cardHeight,
-                    explodeTransition = explodeTransition
                 )
             }
 
@@ -540,9 +526,23 @@ fun TaleCard(
             )
         }
     }
+
+    ExplodingHearts(
+        explodingHeartsStartOffset = explodingHeartsStartOffset,
+        isBubbling = isBubbling,
+        isExploding = isExploding,
+        stopBubbling = { isBubbling = false },
+        startExploding = { isExploding = true },
+        stopExploding = { isExploding = false },
+        cardWidth = cardWidth,
+        cardHeight = cardHeight,
+        explodeTransition = explodeTransition
+    )
 }
 
 // TODO: test bubbling on different display sizes
+// TODO: exploding hearts into a single circle
+// TODO: have a minimum gap between each heart
 @Composable
 fun ExplodingHearts(
     explodingHeartsStartOffset: Offset,
@@ -555,23 +555,25 @@ fun ExplodingHearts(
     cardHeight: Int,
     explodeTransition: Transition<Boolean>,
 ) {
-    val heartShownDuration = integerResource(R.integer.heart_shown_duration)
-    val heartBeforeExplosionDuration =
-        integerResource(R.integer.heart_duration_before_explosion)
-    val heartRepeatAmount = integerResource(R.integer.heart_repeat_amount)
+    val heartShownDuration = integerResource(R.integer.heart_explosion_shown_duration)
+    val heartBeforeExplosionDuration = integerResource(R.integer.heart_duration_before_explosion)
+    val heartRepeatAmount = integerResource(R.integer.heart_explosion_repeat_amount)
     var heartTargets by remember {
         mutableStateOf(
             List(heartRepeatAmount) {
                 explodingHeartsStartOffset
-            }
-        )
+            })
     }
 
     LaunchedEffect(isBubbling) {
         if (isBubbling) {
             delay(heartBeforeExplosionDuration.toLong())
 
-            heartTargets = heartTargets.makeHeartTargets(cardWidth, cardHeight)
+            heartTargets = heartTargets.makeHeartTargets(
+                cardWidth,
+                cardHeight
+            )
+
             startExploding()
             stopBubbling()
         }
@@ -587,25 +589,27 @@ fun ExplodingHearts(
 
     // TODO: make sure we can spam the heart button
     val painter = rememberVectorPainter(Icons.Filled.Favorite)
-    val stiffness = 10f
+    val stiffness = if (isExploding) 10f else 1000f
     val offsets = heartTargets.map {
         explodeTransition.animateOffset(
             transitionSpec = {
                 spring(
                     stiffness = stiffness,
                 )
-            }
-        ) { state ->
+            }) { state ->
             when (state) {
-                true -> Offset(it.x, it.y)
+                true -> Offset(
+                    it.x,
+                    it.y
+                )
+
                 false -> explodingHeartsStartOffset
             }
         }
     }
 
     val opacity by explodeTransition.animateFloat(
-        transitionSpec = { spring(stiffness = stiffness) }
-    ) { state ->
+        transitionSpec = { spring(stiffness = stiffness) }) { state ->
         when (state) {
             true -> 0f
             false -> 1f
@@ -613,11 +617,10 @@ fun ExplodingHearts(
     }
 
     val scale by explodeTransition.animateFloat(
-        transitionSpec = { spring(stiffness = stiffness) }
-    ) { state ->
+        transitionSpec = { spring(stiffness = stiffness) }) { state ->
         when (state) {
-            true -> 2.5f
-            false -> 1.0f
+            true -> 1.5f
+            false -> 1f
         }
     }
 
@@ -627,9 +630,12 @@ fun ExplodingHearts(
         with(painter) {
             repeat(heartRepeatAmount) { i ->
                 with(offsets[i]) {
-                    translate(value.x, value.y) {
+                    translate(
+                        value.x,
+                        value.y
+                    ) {
                         draw(
-                            painter.intrinsicSize * scale,
+                            intrinsicSize * scale,
                             colorFilter = ColorFilter.tint(
                                 HeartRed.copy(
                                     alpha = if (isExploding) opacity else 0f
@@ -646,12 +652,20 @@ fun ExplodingHearts(
 // TODO: constants for these randoms?
 // TODO: make explode look better
 private fun List<Offset>.makeHeartTargets(
-    width: Int, height: Int
+    width: Int,
+    height: Int,
 ) = map {
-    val xRandom = Random.nextInt(0, width).toFloat()
-    val yRandom = Random.nextInt(0, height).toFloat()
+    val xRandom = Random.nextInt(
+        0,
+        width
+    ).toFloat()
+    val yRandom = Random.nextInt(
+        0,
+        height
+    ).toFloat()
     Offset(
-        xRandom, yRandom
+        xRandom,
+        yRandom
     )
 }
 
@@ -661,12 +675,13 @@ fun YouDoUDropDown(
     isContextMenuVisible: Boolean,
     setContextMenuVisible: (Boolean) -> Unit,
     contextMenuOffset: Offset,
-    tale: Tale
+    tale: Tale,
 ) {
     val density = LocalDensity.current
     val dpOffset = with(density) {
         DpOffset(
-            contextMenuOffset.x.toDp(), contextMenuOffset.y.toDp()
+            contextMenuOffset.x.toDp(),
+            contextMenuOffset.y.toDp()
         )
     }
 
@@ -682,26 +697,29 @@ fun YouDoUDropDown(
         shape = MaterialTheme.shapes.small
     ) {
         dropDownItems.forEach {
-            DropdownMenuItem(onClick = {
-                it.onItemClick()
-                setContextMenuVisible(false)
-            }, text = {
-                Text(
-                    text = it.text.replace(
-                        TALE_DURATION_SPECIFIER,
-                        integerResource(tale.duration).toLong()
-                            .formatTimeSeconds(appendZero = false)
-                    ),
-                    color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            })
+            DropdownMenuItem(
+                onClick = {
+                    it.onItemClick()
+                    setContextMenuVisible(false)
+                },
+                text = {
+                    Text(
+                        text = it.text.replace(
+                            TALE_DURATION_SPECIFIER,
+                            integerResource(tale.duration).toLong()
+                                .formatTimeSeconds(appendZero = false)
+                        ),
+                        color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                })
         }
     }
 }
 
 @Composable
 fun TaleImage(
+    modifier: Modifier,
     tale: Tale,
     expirationSeconds: Long,
     expirationSecondsWarningThreshold: Int,
@@ -714,29 +732,43 @@ fun TaleImage(
     Image(
         painter = painterResource(tale.thumbnail),
         contentDescription = stringResource(tale.contentDescription),
-        modifier = Modifier
+        modifier = modifier
             .clip(MaterialTheme.shapes.medium)
             .drawWithContent {
                 drawContent()
                 // TODO: replace me with a simple boolean to pass to the composable
                 if (expirationSeconds < expirationSecondsWarningThreshold) {
                     drawRect(
-                        color = Color(0, 0, 0, 125), size = Size(
-                            size.width - (size.width * heightFactor), size.height
+                        color = Color(
+                            0,
+                            0,
+                            0,
+                            125
+                        ),
+                        size = Size(
+                            size.width - (size.width * heightFactor),
+                            size.height
                         )
                     )
                 }
             }
-            .combinedClickable(true, onClick = {
-                onClickTale(tale)
-            }, onLongClick = {
-                makeContextMenuVisible()
-            })
+            .combinedClickable(
+                true,
+                onClick = {
+                    onClickTale(tale)
+                },
+                onLongClick = {
+                    makeContextMenuVisible()
+                })
             .pointerInteropFilter {
-                setContextMenuOffset(Offset(it.x, it.y))
+                setContextMenuOffset(
+                    Offset(
+                        it.x,
+                        it.y
+                    )
+                )
                 false
-            }
-    )
+            })
 }
 
 @Composable
@@ -756,8 +788,7 @@ fun TaleTime(
         if (expirationSeconds < expirationSecondsWarningThreshold) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
     Box(
-        modifier = modifier
-            .padding(cornerPadding)
+        modifier = modifier.padding(cornerPadding)
     ) {
         Text(
             fontWeight = expirationFontWeight,
@@ -860,44 +891,48 @@ fun TaleHeartCount(
                     String.format(
                         stringResource(
                             R.string.yes_hearts_content_description
-                        ), hearts
+                        ),
+                        hearts
                     )
                 },
-                tint = tint, modifier = Modifier,
+                tint = tint,
+                modifier = Modifier,
             )
 
             // TODO: we gotta test this
             if (hearts > 0) {
-                hearts.toString()
-                    .mapIndexed { index, c -> Digit(c, hearts, index) }
-                    .forEachIndexed { i, digit ->
-                        AnimatedContent(
-                            targetState = digit,
-                            transitionSpec = {
-                                // TODO: how to make this be just greater than sign
-                                if (targetState > initialState) {
-                                    slideInVertically { -it } togetherWith slideOutVertically { it }
-                                } else {
-                                    slideInVertically { it } togetherWith slideOutVertically { -it }
-                                }
+                hearts.toString().mapIndexed { index, c ->
+                    Digit(
+                        c,
+                        hearts,
+                        index
+                    )
+                }.forEachIndexed { i, digit ->
+                    AnimatedContent(
+                        targetState = digit,
+                        transitionSpec = {
+                            // TODO: how to make this be just greater than sign
+                            if (targetState > initialState) {
+                                slideInVertically { -it } togetherWith slideOutVertically { it }
+                            } else {
+                                slideInVertically { it } togetherWith slideOutVertically { -it }
                             }
-                        ) { digit ->
-                            val last = hearts.toString().length - 1
-                            Text(
-                                text = "${digit.digitChar}",
-                                style = textStyle,
-                                // TODO: ensure this width is consistent on different
-                                //  displays
-                                // TODO: ui check
+                        }) { digit ->
+                        val last = hearts.toString().length - 1
+                        Text(
+                            text = "${digit.digitChar}",
+                            style = textStyle,
+                            // TODO: ensure this width is consistent on different
+                            //  displays
+                            // TODO: ui check
 
-                                modifier = Modifier
-                                    .width(
-                                        if (i == last) 11.dp
-                                        else 9.dp
-                                    )
+                            modifier = Modifier.width(
+                                if (i == last) 11.dp
+                                else 9.dp
                             )
-                        }
+                        )
                     }
+                }
             }
         }
     }
@@ -943,8 +978,12 @@ fun PreviewTaleCardFar() {
 }
 
 // TODO: no suppressions!
+// TODO: make run preview scrollable and have functioning hearts
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("VisualLintBounds", "VisualLintAccessibilityTestFramework")
+@Suppress(
+    "VisualLintBounds",
+    "VisualLintAccessibilityTestFramework"
+)
 @Preview
 @Composable
 fun PreviewTaleGrid() {
@@ -954,6 +993,6 @@ fun PreviewTaleGrid() {
         contentPadding = PaddingValues(4.dp),
         onClickTale = { },
         removeTale = { },
-        scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+        scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     )
 }

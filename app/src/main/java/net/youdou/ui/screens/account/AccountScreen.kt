@@ -162,11 +162,11 @@ fun AccountSignUpPage(
 ) {
     val usernameMaxLength = integerResource(R.integer.username_max_length)
     val passwordMaxLength = integerResource(R.integer.password_max_length)
-    val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
+    val phoneNumberMaxLength = integerResource(R.integer.phone_number_max_length)
 
     val usernameMinLength = integerResource(R.integer.username_min_length)
     val passwordMinLength = integerResource(R.integer.password_min_length)
-    val phoneNumberMinLength = integerResource(R.integer.phone_min_length)
+    val phoneNumberMinLength = integerResource(R.integer.phone_number_min_length)
 
     var usernameError by remember { mutableStateOf(false) }
     var phoneNumberError by remember { mutableStateOf(false) }
@@ -421,7 +421,7 @@ fun AuthenticateSignUpForm(
 
     val usernameMaxLength = integerResource(R.integer.username_max_length)
     val passwordMaxLength = integerResource(R.integer.password_max_length)
-    val phoneNumberMaxLength = integerResource(R.integer.phone_max_length)
+    val phoneNumberMaxLength = integerResource(R.integer.phone_number_max_length)
 
     AuthenticateFormBase(
         modifier = modifier

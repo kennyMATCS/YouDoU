@@ -38,16 +38,17 @@
     <integer name="preview_10_hearts">0</integer>
     <integer name="preview_11_hearts">0</integer>
     <integer name="preview_12_hearts">0</integer>
-    <!-- Better names for this stuff -->
+
     <integer name="username_max_length">254</integer>
     <integer name="password_max_length">32</integer>
-    <integer name="phone_max_length">10</integer>
+    <integer name="phone_number_max_length">10</integer>
     <integer name="password_min_length">8</integer>
-    <integer name="phone_min_length">10</integer>
+    <integer name="phone_number_min_length">10</integer>
     <integer name="username_min_length">5</integer>
+
     <integer name="expiration_seconds_warning_threshold">3600</integer>
     <integer name="tale_record_delay">86400</integer>
-    <integer name="heart_repeat_amount">35</integer>
-    <integer name="heart_shown_duration">2000</integer>
+    <integer name="heart_explosion_repeat_amount">88</integer>
+    <integer name="heart_explosion_shown_duration">2000</integer>
     <integer name="heart_duration_before_explosion">495</integer>
 </resources>

@@ -13,9 +13,6 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PreviewGlimpseCard">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="YouDoU.app">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2025-06-16T23:43:01.965803519Z">
@@ -26,9 +23,6 @@
           </Target>
         </DropdownSelection>
         <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="PreviewAccountStartPage">
-        <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="PreviewGlimpseGrid">
         <option name="selectionMode" value="DROPDOWN" />
@@ -45,6 +39,12 @@
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="PreviewScaffold">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="PreviewTaleGrid">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="PreviewTaleCardMedium">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

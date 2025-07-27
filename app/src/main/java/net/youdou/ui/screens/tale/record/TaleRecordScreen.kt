@@ -27,6 +27,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -240,7 +241,7 @@ fun TaleCamera(
 
                     LaunchedEffect(isRecording) {
                         while (isRecording) {
-                            delay(1000L) // TODO: constant for seconds?
+                            delay(1000L)
 
                             recordingLength += 1L
                         }
@@ -249,6 +250,7 @@ fun TaleCamera(
                     Box(
                         modifier = modifier
                             .padding(contentPadding)
+                            .consumeWindowInsets(contentPadding)
                             .fillMaxSize()
                     ) {
                         AndroidView(
@@ -320,11 +322,8 @@ fun TaleCamera(
                             }
                         }
 
-                        // TODO: consolidate launch effect. or organize them into code somewhere
-
                         val interactionSource = remember { MutableInteractionSource() }
                         val taleRecordDelay = integerResource(R.integer.tale_record_delay).toLong()
-
                         // TODO: break this stuff up into separate composables
                         // TODO: show dynamic timeout in actual dialog
                         IconButton(
